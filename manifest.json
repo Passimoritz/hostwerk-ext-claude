@@ -3,12 +3,12 @@
   "id": "claude",
   "color": "#d97757",
   "name": {
-    "de": "Claude",
-    "en": "Claude"
+    "de": "KI-Anbindung",
+    "en": "AI Connect"
   },
   "description": {
-    "de": "Claude mit Hostwerk: Claude Desktop und Claude Code verbinden, im Projekt loslegen, Tokens sparen und Tipps & Tricks für bessere Ergebnisse.",
-    "en": "Claude with Hostwerk: connect Claude Desktop and Claude Code, get going in your project, save tokens and tips & tricks for better results."
+    "de": "Deine KIs mit Hostwerk verbinden: Gedächtnis für jede KI (Claude, OpenAI, Gemini, lokal …) genau einstellen, Claude Desktop und Claude Code anbinden, im Projekt loslegen, Tokens sparen, Tipps & Tricks.",
+    "en": "Connect your AIs with Hostwerk: fine-tune the memory every AI gets (Claude, OpenAI, Gemini, local …), connect Claude Desktop and Claude Code, get going in your project, save tokens, tips & tricks."
   },
   "permissions": [
     "read:claude",
@@ -20,24 +20,67 @@
   ],
   "page": {
     "title": {
-      "de": "Claude",
-      "en": "Claude"
+      "de": "KI-Anbindung",
+      "en": "AI Connect"
     },
     "description": {
-      "de": "Claude mit deinen Projekten verbinden, loslegen und sparsam halten – Wissen und Gedächtnis liegen im Wissensgraphen.",
-      "en": "Connect Claude with your projects, get going and keep it frugal – knowledge and memory live in the knowledge graph."
+      "de": "Was jede KI über dich und deine Projekte weiß – und wie Claude & Co. mit deinen Projekten arbeiten.",
+      "en": "What every AI knows about you and your projects – and how Claude & co. work with your projects."
     },
     "icon": "sparkles",
     "file": "page/index.html",
     "tabs": [
-      { "id": "go", "title": { "de": "Loslegen", "en": "Get going" }, "icon": "rocket" },
-      { "id": "connect", "title": { "de": "Verbinden", "en": "Connect" }, "icon": "network" },
-      { "id": "tokens", "title": { "de": "Token sparen", "en": "Save tokens" }, "icon": "gauge" },
-      { "id": "tips", "title": { "de": "Tipps & Tricks", "en": "Tips & tricks" }, "icon": "star" },
-      { "id": "log", "title": { "de": "Protokoll", "en": "Log" }, "icon": "list" }
+      {
+        "id": "memory",
+        "title": {
+          "de": "Gedächtnis",
+          "en": "Memory"
+        },
+        "icon": "sparkles"
+      },
+      {
+        "id": "go",
+        "title": {
+          "de": "Loslegen",
+          "en": "Get going"
+        },
+        "icon": "rocket"
+      },
+      {
+        "id": "connect",
+        "title": {
+          "de": "Verbinden",
+          "en": "Connect"
+        },
+        "icon": "network"
+      },
+      {
+        "id": "tokens",
+        "title": {
+          "de": "Token sparen",
+          "en": "Save tokens"
+        },
+        "icon": "gauge"
+      },
+      {
+        "id": "tips",
+        "title": {
+          "de": "Tipps & Tricks",
+          "en": "Tips & tricks"
+        },
+        "icon": "star"
+      },
+      {
+        "id": "log",
+        "title": {
+          "de": "Protokoll",
+          "en": "Log"
+        },
+        "icon": "list"
+      }
     ]
   },
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "Hostwerk",
   "homepage": "https://github.com/Passimoritz/hostwerk-ext-claude",
   "license": "MIT",

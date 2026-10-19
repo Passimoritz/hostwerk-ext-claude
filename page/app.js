@@ -271,6 +271,51 @@ async function renderTips() {
   for (const b of document.querySelectorAll('[data-go]')) b.onclick = () => (b.dataset.go === 'graph' ? Hostwerk.navigate('/ext/knowledge-graph') : Hostwerk.setTab(b.dataset.go)).catch(fail);
 }
 
+/* ================================================================ Memory for every AI */
+// Hostwerk adds the thought net (about you, general, per project) to the system prompt of EVERY AI provider –
+// local or online. Everything here is adjustable: on/off, which areas, the attached project's area, an excerpt of the
+// knowledge graph, size limit and per provider. Private notes never leave Hostwerk; online providers additionally get
+// secrets blacked out (privacy settings per provider in the AI assistant).
+let mem = null;
+let memPreview = null;
+let memProvider = '';
+async function renderMemory() {
+  try { mem = await Hostwerk.get('/ai/memory-share'); } catch (e) { Hostwerk.render('#memory', html`<div class="card"><div class="empty"><b>${t('memUnavailable')}</b><p class="small muted">${e.message}</p></div></div>`); return; }
+  const P = mem.available.providers; if (!memProvider || !P.some((x) => x.id === memProvider)) memProvider = (P[0] || {}).id || '';
+  const cl = mem.available.clusters.filter((c) => c.kind !== 'project');
+  const sw = (id, on, label) => html`<label class="cl-sw"><input type="checkbox" id="${id}" ${on ? raw('checked') : ''}><span>${label}</span></label>`;
+  Hostwerk.render('#memory', html`<div class="cl-stack cl-fade">
+    <div class="cl-mem-hero"><div class="cl-mem-orb" aria-hidden="true">${I('sparkles', 26)}</div><div><h2>${t('memTitle')}</h2><p class="muted">${t('memText')}</p></div>
+      <label class="cl-sw big"><input type="checkbox" id="mOn" ${mem.on ? raw('checked') : ''}><span>${mem.on ? t('memOn') : t('memOff')}</span></label></div>
+    ${!mem.mindOn ? html`<div class="callout warn"><div class="callout-body small">${t('memMindOff')}</div></div>` : ''}
+    <div class="grid grid-2">
+      <div class="card"><div class="card-head">${I('book')}<h3>${t('memWhat')}</h3></div><div class="card-body cl-stack" style="gap:8px">
+        ${cl.map((c) => sw(`mc-${c.id}`, mem.clusters.includes(c.id), c.title))}
+        ${sw('mProj', mem.project, t('memProject'))}
+        ${sw('mGraph', mem.graph, t('memGraph'))}
+        <label class="label" for="mMax">${t('memMax', { n: n(mem.maxTokens) })}</label>
+        <input type="range" id="mMax" min="200" max="8000" step="100" value="${mem.maxTokens}" aria-valuetext="${n(mem.maxTokens)} Tokens">
+        <p class="tiny muted" style="margin:0">${t('memPrivate')}</p>
+      </div></div>
+      <div class="card"><div class="card-head">${I('bot')}<h3>${t('memWho')}</h3></div><div class="card-body cl-stack" style="gap:8px">
+        ${P.map((p) => sw(`mp-${p.id}`, mem.providers[p.id] !== false, p.label))}
+        <p class="tiny muted" style="margin:0">${t('memWhoHint')}</p>
+      </div></div>
+    </div>
+    <div class="card"><div class="card-head">${I('eye')}<h3>${t('memPreview')}</h3><div class="right row-tight"><select class="select" id="mPv" aria-label="${t('memPreviewFor')}">${P.map((p) => html`<option value="${p.id}" ${p.id === memProvider ? raw('selected') : ''}>${p.label}</option>`)}</select><button class="btn sm" id="mPvGo">${t('memShow')}</button></div></div>
+      <div class="card-body">${memPreview == null ? html`<p class="small muted" style="margin:0">${t('memPreviewHint')}</p>` : memPreview.text ? html`<div class="tiny muted" style="margin-bottom:6px">≈ ${n(memPreview.tokens)} Tokens</div><pre class="cl-mem-pre">${memPreview.text}</pre>` : html`<p class="small muted" style="margin:0">${t('memNothing')}</p>`}</div></div>
+  </div>`);
+  const save = async (body) => { try { mem = { ...mem, ...(await Hostwerk.put('/ai/memory-share', body)) }; memPreview = null; renderMemory(); } catch (e) { fail(e); renderMemory(); } };
+  $('mOn').onchange = (e) => save({ on: e.target.checked });
+  for (const c of cl) $(`mc-${c.id}`).onchange = (e) => save({ clusters: e.target.checked ? [...new Set([...mem.clusters, c.id])] : mem.clusters.filter((x) => x !== c.id) });
+  $('mProj').onchange = (e) => save({ project: e.target.checked });
+  $('mGraph').onchange = (e) => save({ graph: e.target.checked });
+  $('mMax').onchange = (e) => save({ maxTokens: Number(e.target.value) });
+  for (const p of P) $(`mp-${p.id}`).onchange = (e) => save({ providers: { ...mem.providers, [p.id]: e.target.checked } });
+  $('mPv').onchange = (e) => { memProvider = e.target.value; };
+  $('mPvGo').onclick = async () => { try { memPreview = await Hostwerk.post('/ai/memory-share/preview', { provider: memProvider, question: '' }); renderMemory(); } catch (e) { fail(e); } };
+}
+
 /* ================================================================ Protokoll */
 async function renderLog() {
   let list = [];
@@ -285,7 +330,7 @@ async function renderLog() {
 function show(next) {
   tab = next || 'go';
   for (const el of document.querySelectorAll('[data-tab]')) el.hidden = el.dataset.tab !== tab;
-  const fn = { go: renderGo, connect: renderConnect, tokens: renderTokens, tips: renderTips, log: renderLog }[tab];
+  const fn = { memory: renderMemory, go: renderGo, connect: renderConnect, tokens: renderTokens, tips: renderTips, log: renderLog }[tab];
   if (fn) Promise.resolve(fn()).catch(fail);
 }
 Hostwerk.ready().then(async (info) => {

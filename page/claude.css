@@ -110,3 +110,16 @@
   .cl-term .typed { stroke-dashoffset: 0; }
   .cl-ring .fg, .cl-ring .tick { animation: none; stroke-dashoffset: 0; }
 }
+
+/* Memory tab */
+.cl-mem-hero { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; padding: 18px; border-radius: 14px; background: linear-gradient(135deg, color-mix(in srgb, var(--accent) 16%, var(--surface)), var(--surface)); border: 1px solid var(--line); }
+.cl-mem-hero > div:nth-child(2) { flex: 1; min-width: 220px; }
+.cl-mem-hero h2 { margin: 0 0 4px; font-size: 20px; }
+.cl-mem-hero p { margin: 0; }
+.cl-mem-orb { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; color: var(--surface); background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--accent) 60%, var(--surface)), var(--accent)); box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); animation: cl-pulse 2.8s ease-out infinite; }
+@keyframes cl-pulse { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 45%, transparent); } 70% { box-shadow: 0 0 0 14px transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+@media (prefers-reduced-motion: reduce) { .cl-mem-orb { animation: none; } }
+.cl-sw { display: flex; gap: 8px; align-items: center; cursor: pointer; font-size: 14px; }
+.cl-sw input { width: 16px; height: 16px; accent-color: var(--accent); }
+.cl-sw.big { font-weight: 600; }
+.cl-mem-pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 360px; overflow: auto; font-size: 12.5px; background: var(--surface-2); padding: 10px; border-radius: 8px; margin: 0; }
