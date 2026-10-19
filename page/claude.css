@@ -1,0 +1,112 @@
+/* Nur, was Hostwerks Baukasten nicht hat: Zeichnungen, Bewegung, Tipps-Karten. Farben immer aus den Hostwerk-Variablen. */
+.cl-ico { flex: none; vertical-align: -3px; }
+.cl-stack { display: flex; flex-direction: column; gap: 14px; }
+.cl-fade { animation: cl-in .35s ease-out both; }
+@keyframes cl-in { from { opacity: 0; transform: translateY(6px); } }
+
+/* ---------- Loslegen ---------- */
+.cl-hero { display: grid; grid-template-columns: minmax(0, 1fr) 260px; gap: 18px; align-items: center; padding: 18px; border-radius: 16px; border: 1px solid var(--line); background: linear-gradient(135deg, var(--accent-soft), transparent 60%), var(--surface); }
+@media (max-width: 860px) { .cl-hero { grid-template-columns: 1fr; } .cl-term { display: none; } }
+.cl-hero h2 { margin: 0 0 4px; font-size: 20px; text-wrap: balance; }
+.cl-hero .cl-form { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; }
+.cl-hero textarea { min-height: 76px; resize: vertical; }
+.cl-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cl-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--text); font: inherit; font-size: 12.5px; cursor: pointer; transition: border-color .15s, transform .1s; }
+.cl-chip:hover { border-color: var(--accent); }
+.cl-chip:active { transform: scale(.97); }
+.cl-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cl-cmd { font-family: var(--mono, monospace); font-size: 12px; padding: 6px 9px; border-radius: 8px; background: var(--surface-2); overflow-wrap: anywhere; }
+
+/* Terminal-Zeichnung: Befehl tippt sich, Cursor blinkt */
+.cl-term { width: 100%; max-width: 260px; height: auto; justify-self: center; }
+.cl-term .win { fill: var(--surface-2); stroke: var(--line); stroke-width: 1.5; }
+.cl-term .bar { fill: var(--line); }
+.cl-term .dot { fill: var(--muted); opacity: .6; }
+.cl-term .line { fill: none; stroke: var(--muted); stroke-width: 3; stroke-linecap: round; opacity: .55; }
+.cl-term .prompt { fill: none; stroke: var(--accent); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.cl-term .typed { fill: none; stroke: var(--text); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 90; stroke-dashoffset: 90; animation: cl-type 3.2s steps(12) infinite; }
+.cl-term .cursor { fill: var(--accent); animation: cl-blink 1s steps(1) infinite; }
+.cl-term .spark { fill: var(--accent); transform-box: fill-box; transform-origin: center; animation: cl-spark 3.2s ease-in-out infinite; }
+@keyframes cl-type { 0% { stroke-dashoffset: 90; } 45%, 100% { stroke-dashoffset: 0; } }
+@keyframes cl-blink { 50% { opacity: 0; } }
+@keyframes cl-spark { 0%, 50% { transform: scale(0) rotate(0); opacity: 0; } 65% { transform: scale(1.15) rotate(45deg); opacity: 1; } 100% { transform: scale(1) rotate(90deg); opacity: 0; } }
+
+.cl-tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.cl-tile { display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); animation: cl-in .35s ease-out both; }
+.cl-tile.ok { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.cl-tile-top { display: flex; align-items: center; gap: 10px; }
+.cl-ring { width: 38px; height: 38px; flex: none; }
+.cl-ring circle { fill: none; stroke-width: 3; }
+.cl-ring .bg { stroke: var(--line); }
+.cl-ring .fg { stroke: var(--ok); stroke-dasharray: 101; stroke-dashoffset: 101; transform: rotate(-90deg); transform-origin: center; animation: cl-ring .8s ease-out .2s forwards; }
+.cl-ring .tick { fill: none; stroke: var(--ok); stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 20; stroke-dashoffset: 20; animation: cl-ring .3s ease-out .9s forwards; }
+.cl-ring .ico { color: var(--muted); }
+@keyframes cl-ring { to { stroke-dashoffset: 0; } }
+.cl-tile .grow { flex: 1; min-width: 0; }
+
+/* ---------- Verbinden: zwei Knoten mit Leitung ---------- */
+.cl-link { width: 120px; height: 40px; flex: none; }
+.cl-link .node { fill: var(--surface-2); stroke: var(--line); stroke-width: 1.5; }
+.cl-link .wire { fill: none; stroke: var(--muted); stroke-width: 2.5; stroke-dasharray: 5 5; animation: cl-flow 1s linear infinite; }
+.cl-link.on .wire { stroke: var(--ok); stroke-dasharray: none; animation: none; }
+.cl-link.on .node.b { stroke: var(--ok); }
+.cl-link .glyph { fill: none; stroke: var(--text-2, var(--text)); stroke-width: 1.8; stroke-linecap: round; }
+@keyframes cl-flow { to { stroke-dashoffset: -10; } }
+
+/* ---------- Token sparen ---------- */
+.cl-chart { width: 100%; height: 150px; display: block; }
+.cl-chart .bar { fill: var(--accent); transform-box: fill-box; transform-origin: bottom; animation: cl-grow .6s cubic-bezier(.2, .8, .2, 1) both; }
+.cl-chart .bar:hover { fill: var(--accent-text, var(--accent)); }
+.cl-chart .axis { stroke: var(--line); }
+.cl-chart text { fill: var(--muted); font-size: 10px; }
+@keyframes cl-grow { from { transform: scaleY(0); } }
+.cl-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.cl-kpi { padding: 10px; border-radius: 10px; background: var(--surface-2); }
+.cl-kpi b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+.cl-kpi span { color: var(--muted); font-size: 12px; }
+.cl-kpi .down { color: var(--ok); } .cl-kpi .up { color: var(--warn); }
+.cl-tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+.cl-tool { display: flex; flex-direction: column; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); overflow: hidden; animation: cl-in .35s ease-out both; }
+.cl-tool.on { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
+.cl-tool-head { display: flex; align-items: center; gap: 8px; padding: 12px 14px 0; flex-wrap: wrap; }
+.cl-tool-head h3 { margin: 0; font-size: 15px; flex: 1; min-width: 0; }
+.cl-tool-body { padding: 8px 14px 12px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.cl-save { display: flex; align-items: center; gap: 8px; }
+.cl-meter { flex: 1; height: 6px; border-radius: 4px; background: var(--surface-2); overflow: hidden; }
+.cl-meter i { display: block; height: 100%; background: var(--ok); border-radius: 4px; transform-origin: left; animation: cl-grow-x .8s ease-out both; }
+@keyframes cl-grow-x { from { transform: scaleX(0); } }
+.cl-procon { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+@media (max-width: 520px) { .cl-procon { grid-template-columns: 1fr; } }
+.cl-procon ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 3px; font-size: 12.5px; }
+.cl-procon li { display: flex; gap: 6px; align-items: flex-start; }
+.cl-procon .pro .cl-ico { color: var(--ok); } .cl-procon .con .cl-ico { color: var(--warn); }
+.cl-tool-foot { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; padding: 10px 14px; border-top: 1px solid var(--line); }
+.cl-tool-foot .right { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+.cl-live { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); display: inline-block; }
+.cl-live.on { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent); }
+
+/* ---------- Tipps & Tricks ---------- */
+.cl-tipbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.cl-tipbar .input { flex: 1 1 220px; }
+.cl-tips { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.cl-tip { position: relative; display: flex; flex-direction: column; gap: 8px; padding: 14px; border-radius: 14px; border: 1px solid var(--line); background: var(--surface); animation: cl-in .3s ease-out both; }
+.cl-tip:hover { border-color: var(--accent); }
+.cl-tip-top { display: flex; gap: 10px; align-items: center; }
+.cl-tip-art { width: 44px; height: 44px; flex: none; border-radius: 12px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-text, var(--accent)); }
+.cl-tip h3 { margin: 0; font-size: 14.5px; text-wrap: balance; }
+.cl-tip p { margin: 0; font-size: 13px; line-height: 1.5; color: var(--text-2, var(--text)); }
+.cl-tip-foot { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: auto; }
+.cl-key { font: 12px var(--mono, monospace); padding: 2px 7px; border-radius: 6px; border: 1px solid var(--line); border-bottom-width: 3px; background: var(--surface-2); }
+.cl-cat-art { animation: cl-bob 3s ease-in-out infinite; }
+@keyframes cl-bob { 50% { transform: translateY(-2px); } }
+
+/* ---------- Protokoll ---------- */
+.cl-log { display: flex; flex-direction: column; }
+.cl-log-row { display: flex; gap: 10px; align-items: center; padding: 8px 4px; border-bottom: 1px solid var(--line); font-size: 13px; animation: cl-in .25s ease-out both; }
+.cl-log-row:last-child { border-bottom: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cl-fade, .cl-tile, .cl-tool, .cl-tip, .cl-log-row, .cl-chart .bar, .cl-meter i, .cl-cat-art, .cl-link .wire, .cl-term .typed, .cl-term .cursor, .cl-term .spark { animation: none !important; }
+  .cl-term .typed { stroke-dashoffset: 0; }
+  .cl-ring .fg, .cl-ring .tick { animation: none; stroke-dashoffset: 0; }
+}

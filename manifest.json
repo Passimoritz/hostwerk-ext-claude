@@ -1,0 +1,46 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Passimoritz/hostwerk-public/main/sdk/manifest.schema.json",
+  "id": "claude",
+  "color": "#d97757",
+  "name": {
+    "de": "Claude",
+    "en": "Claude"
+  },
+  "description": {
+    "de": "Claude mit Hostwerk: Claude Desktop und Claude Code verbinden, im Projekt loslegen, Tokens sparen und Tipps & Tricks für bessere Ergebnisse.",
+    "en": "Claude with Hostwerk: connect Claude Desktop and Claude Code, get going in your project, save tokens and tips & tricks for better results."
+  },
+  "permissions": [
+    "read:claude",
+    "change:claude",
+    "run:terminal",
+    "read:knowledge",
+    "connect:claude",
+    "storage"
+  ],
+  "page": {
+    "title": {
+      "de": "Claude",
+      "en": "Claude"
+    },
+    "description": {
+      "de": "Claude mit deinen Projekten verbinden, loslegen und sparsam halten – Wissen und Gedächtnis liegen im Wissensgraphen.",
+      "en": "Connect Claude with your projects, get going and keep it frugal – knowledge and memory live in the knowledge graph."
+    },
+    "icon": "sparkles",
+    "file": "page/index.html",
+    "tabs": [
+      { "id": "go", "title": { "de": "Loslegen", "en": "Get going" }, "icon": "rocket" },
+      { "id": "connect", "title": { "de": "Verbinden", "en": "Connect" }, "icon": "network" },
+      { "id": "tokens", "title": { "de": "Token sparen", "en": "Save tokens" }, "icon": "gauge" },
+      { "id": "tips", "title": { "de": "Tipps & Tricks", "en": "Tips & tricks" }, "icon": "star" },
+      { "id": "log", "title": { "de": "Protokoll", "en": "Log" }, "icon": "list" }
+    ]
+  },
+  "version": "1.0.0",
+  "author": "Hostwerk",
+  "homepage": "https://github.com/Passimoritz/hostwerk-ext-claude",
+  "license": "MIT",
+  "icon": "icon.svg",
+  "hostwerk": ">=2.9.0"
+}
