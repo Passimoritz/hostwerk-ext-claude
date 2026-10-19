@@ -1,3 +1,7 @@
+## 1.2.0
+
+- New animated icon and a banner for Hostwerk's new extension page, category “ai”. / Neues bewegtes Symbol und ein Banner für die neue Erweiterungsseite, Kategorie „ai“.
+
 ## 1.1.0
 
 - Renamed to "AI Connect" (KI-Anbindung): it is no longer about Claude only.

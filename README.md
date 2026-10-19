@@ -1,3 +1,5 @@
+![AI Connect](banner.svg)
+
 # Claude
 
 Claude with Hostwerk: connect Claude Desktop and Claude Code, get going right in your project, save tokens, and pick up tips & tricks for better results.

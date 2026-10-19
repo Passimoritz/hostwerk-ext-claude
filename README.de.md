@@ -1,3 +1,5 @@
+![KI-Anbindung](banner.svg)
+
 # Claude
 
 Claude mit Hostwerk: Claude Desktop und Claude Code verbinden, direkt im Projekt loslegen, Tokens sparen und mit Tipps & Tricks bessere Ergebnisse bekommen.
