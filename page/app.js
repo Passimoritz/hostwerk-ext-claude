@@ -255,7 +255,7 @@ async function renderTips() {
   Hostwerk.render('#tips', html`<div class="cl-stack cl-fade">
     <div class="cl-tipbar">
       <input class="input" id="tipQ" type="search" placeholder="${t('tipSearch')}" aria-label="${t('tipSearch')}" value="${tipQ}">
-      <div class="seg" role="tablist" aria-label="${t('categories')}"><button class="${tipCat ? '' : 'on'}" data-cat="">${t('all')}</button>${CL.CATS.map((c) => html`<button class="${tipCat === c.id ? 'on' : ''}" data-cat="${c.id}">${L(c)}</button>`)}</div>
+      <div class="seg" role="group" aria-label="${t('categories')}"><button class="${tipCat ? '' : 'on'}" aria-pressed="${tipCat ? 'false' : 'true'}" data-cat="">${t('all')}</button>${CL.CATS.map((c) => html`<button class="${tipCat === c.id ? 'on' : ''}" aria-pressed="${tipCat === c.id ? 'true' : 'false'}" data-cat="${c.id}">${L(c)}</button>`)}</div>
     </div>
     ${!own.length && !extra.length ? html`<div class="empty"><b>${t('noTips')}</b></div>` : ''}
     <div class="cl-tips">${own.map((x, i) => { const [title, text] = x[lang()] || x.de; const code = lang() === 'en' && x.codeEn ? x.codeEn : x.code; const key = lang() === 'en' && x.keyEn ? x.keyEn : x.key; return html`<article class="cl-tip" style="animation-delay:${Math.min(i, 12) * 35}ms">

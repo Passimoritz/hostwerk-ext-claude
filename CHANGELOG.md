@@ -1,3 +1,7 @@
+## 1.2.1
+
+- The category filter in “Tips & tricks” is a button group for screen readers (aria-pressed). / Der Kategorie-Filter unter „Tipps & Tricks“ ist für Bildschirmleser eine Knopfgruppe (aria-pressed).
+
 ## 1.2.0
 
 - New animated icon and a banner for Hostwerk's new extension page, category “ai”. / Neues bewegtes Symbol und ein Banner für die neue Erweiterungsseite, Kategorie „ai“.
