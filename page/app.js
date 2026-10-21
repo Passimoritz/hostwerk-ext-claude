@@ -1,6 +1,8 @@
-// Claude – Oberfläche. Der Motor steckt in Hostwerk (/claude …, /mind …, /projects): Status, Anbindung, Spar-Werkzeuge,
-// Verbrauch. Alles, was etwas ändert (Datei schreiben, Werkzeug installieren, Claude Desktop verbinden), bestätigt
-// Hostwerk vorher; Befehle tippt die Erweiterung nur ins Terminal – starten tust du sie selbst mit Enter.
+// KI-Anbindung – Oberfläche, für jede KI (Claude, Codex, Gemini, lokale Modelle …). Der Motor steckt in Hostwerk
+// (/claude …, /mind …, /projects – die Pfade heißen aus Kompatibilitätsgründen weiter „claude“): Status, Anbindung,
+// Spar-Werkzeuge, Verbrauch. Alles, was etwas ändert (Datei schreiben, Werkzeug installieren, Claude Desktop verbinden),
+// bestätigt Hostwerk vorher; Befehle tippt die Erweiterung nur ins Terminal – starten tust du sie selbst mit Enter.
+// Was nur für Claude gilt (Claude Desktop, Claude Code, Token-Messung, die meisten Tipps), ist so gekennzeichnet.
 const { html, t, raw } = Hostwerk;
 const $ = (id) => document.getElementById(id);
 const enc = encodeURIComponent;
@@ -24,14 +26,21 @@ let tipQ = '';
 let templates = [];    // eigene Auftrags-Vorlagen (Hostwerk.storage – für alle, die dieses Hostwerk nutzen)
 let settings = {};     // manifest.settings (Token-Tagesgrenze)
 let loadError = null;  // Grunddaten nicht geladen → Fehlerzustand mit „Erneut versuchen“
+let agent = 'claude';  // gewähltes KI-Werkzeug für „Loslegen“ (claude | codex | gemini)
 const locale = () => Hostwerk.lang || 'de';
 
-const connected = () => !!(st && ((st.desktop && st.desktop.connected) || st.codeConnected));
+// Andere KI-Werkzeuge im Terminal meldet Hostwerk ab 3.0 (st.agents); ältere Versionen kennen nur Claude
+const agentInfo = (id) => ((st && st.agents) || []).find((a) => a.id === id) || null;
+const agentInstalled = (id) => (id === 'claude' ? !!(st && st.installed) : !!(agentInfo(id) && agentInfo(id).installed));
+const agentConnected = (id) => (id === 'claude' ? !!(st && st.codeConnected) : !!(agentInfo(id) && agentInfo(id).connected));
+const agentsHere = () => CL.AGENTS.filter((a) => a.id === 'claude' || agentInfo(a.id));
+const connected = () => !!(st && ((st.desktop && st.desktop.connected) || st.codeConnected || (st.agents || []).some((a) => a.connected)));
 const project = () => (projects || []).find((p) => p.id === pid) || null;
 
 async function loadBase() {
   [st, projects] = await Promise.all([Hostwerk.get('/claude/status'), Hostwerk.get('/projects').catch(() => [])]);
   try { templates = (await Hostwerk.storage.get('templates')) || []; } catch { templates = []; }
+  try { const a = await Hostwerk.storage.get('agent'); if (a && CL.AGENTS.some((x) => x.id === a)) agent = a; } catch { /* Standard: Claude Code */ }
   try { settings = (await Hostwerk.settings.get()) || {}; } catch { settings = {}; }
   if (!pid) { try { pid = await Hostwerk.storage.get('project'); } catch { pid = null; } }
   if (!pid || !projects.some((p) => p.id === pid)) pid = projects[0] ? projects[0].id : null;
@@ -53,7 +62,9 @@ const TERM_ART = raw(`<svg class="cl-term" viewBox="0 0 260 170" aria-hidden="tr
 function renderGo() {
   if (!st) return;
   const p = project();
-  const cmd = CL.startCommand(goal, { connected: connected(), lang: lang() });
+  if (!agentsHere().some((a) => a.id === agent)) agent = 'claude';
+  const ag = CL.agentOf(agent);
+  const cmd = CL.startCommand(goal, { connected: agentConnected(agent), lang: lang(), agent });
   const chromium = (st.browsers || []).filter((b) => b.engine === 'chromium');
   const ring = (ok, ico) => (ok
     ? raw(`<svg class="cl-ring" viewBox="0 0 38 38" aria-hidden="true"><circle class="bg" cx="19" cy="19" r="16"/><circle class="fg" cx="19" cy="19" r="16"/><path class="tick" d="m12 19.5 5 5 9-10"/></svg>`)
@@ -65,6 +76,7 @@ function renderGo() {
         <div class="small muted">${t('goText')}</div>
         <div class="cl-form">
           <div class="row-tight" style="flex-wrap:wrap"><label class="label" for="goProject">${t('project')}</label>${projectPicker('goProject')}</div>
+          ${agentsHere().length > 1 ? html`<div class="row-tight" style="flex-wrap:wrap"><span class="label" id="goAgentLbl">${t('agentLabel')}</span><div class="seg" role="group" aria-labelledby="goAgentLbl">${agentsHere().map((a) => html`<button type="button" class="${a.id === agent ? 'on' : ''}" aria-pressed="${a.id === agent ? 'true' : 'false'}" data-agent="${a.id}">${a.label}${agentInstalled(a.id) ? '' : html` <span class="tiny muted">(${t('notInstalled')})</span>`}</button>`)}</div></div>` : ''}
           <textarea class="input" id="goal" placeholder="${t('goalPlaceholder')}" aria-label="${t('goalLabel')}">${goal}</textarea>
           <div class="cl-chips">${CL.TASKS.map((x) => html`<button type="button" class="cl-chip" data-task="${x.id}">${I(x.icon, 14)}${x[lang()][0]}</button>`)}
             ${templates.map((x) => html`<span class="cl-chip cl-own"><button type="button" class="cl-chip-btn" data-own="${x.id}" title="${x.text}">${I('star', 14)}${x.title}</button><button type="button" class="cl-chip-x" data-own-del="${x.id}" aria-label="${t('tplRemove', { name: x.title })}" title="${t('tplRemove', { name: x.title })}">×</button></span>`)}</div>
@@ -73,34 +85,38 @@ function renderGo() {
           <div class="cl-cmd" title="${t('cmdPreview')}">${p ? `${p.path}> ` : ''}${cmd}</div>
           <div class="row-tight" style="flex-wrap:wrap">
             <button class="btn primary" id="goStart" ${!p || !goal.trim() ? raw('disabled') : ''}>${I('play', 14)}${t('startWithGoal')}</button>
-            <button class="btn" id="goOpen" ${!p ? raw('disabled') : ''}>${I('terminal', 14)}${t('justOpen')}</button>
+            <button class="btn" id="goOpen" ${!p ? raw('disabled') : ''}>${I('terminal', 14)}${t('justOpen', { name: ag.label })}</button>
           </div>
-          <div class="tiny muted">${t('goHint')}${connected() ? ' ' + t('goHintConnected') : ' ' + t('goHintConnect')}</div>
+          <div class="tiny muted">${t('goHint')}${agentConnected(agent) ? ' ' + t('goHintConnected') : ' ' + t('goHintConnect')}</div>
         </div>
       </div>
       ${TERM_ART}
     </div>
     <div class="card"><div class="card-head">${I('download')}<h3>${t('installTitle')}</h3></div>
       <div class="card-body"><div class="cl-tiles">
-        <div class="cl-tile ${st.desktop.installed ? 'ok' : ''}" style="animation-delay:0ms"><div class="cl-tile-top">${ring(st.desktop.installed, 'monitor')}<div class="grow"><b>${t('desktopApp')}</b><div class="tiny muted">${st.desktop.supported ? (st.desktop.installed ? t('installedHere') : t('forWinMac')) : t('desktopLinux')}</div></div></div>
+        <div class="cl-tile ${st.desktop.installed ? 'ok' : ''}" style="animation-delay:0ms"><div class="cl-tile-top">${ring(st.desktop.installed, 'monitor')}<div class="grow"><b>${t('desktopApp')}</b> <span class="badge">${t('forClaude')}</span><div class="tiny muted">${st.desktop.supported ? (st.desktop.installed ? t('installedHere') : t('forWinMac')) : t('desktopLinux')}</div></div></div>
           ${st.desktop.installed ? '' : html`<button class="btn sm" data-url="${st.desktop.download}">${I('external', 14)}${t('download')}</button>`}</div>
         <div class="cl-tile ${st.installed ? 'ok' : ''}" style="animation-delay:70ms"><div class="cl-tile-top">${ring(st.installed, 'terminal')}<div class="grow"><b>${t('codeInTerminal')}</b><div class="tiny muted">${st.installed ? t('installedVersion', { v: st.version || '' }) : t('officialInstaller')}</div></div></div>
           ${st.installed ? '' : html`<button class="btn sm primary" id="installCode">${I('play', 14)}${t('install')}</button>`}</div>
-        <div class="cl-tile" style="animation-delay:140ms"><div class="cl-tile-top">${ring(false, 'globe')}<div class="grow"><b>${t('inBrowser')}</b><div class="tiny muted">${(st.browsers || []).length ? t('foundBrowsers', { list: st.browsers.map((b) => b.label).join(', ') }) : t('noBrowser')}</div></div></div>
-          <div class="row-tight" style="flex-wrap:wrap"><button class="btn sm" data-url="${st.web}">${I('external', 14)}${t('openWeb')}</button>${chromium.length || !(st.browsers || []).length ? html`<button class="btn sm ghost" data-url="${st.chrome}">${I('external', 14)}Claude in Chrome</button>` : ''}</div></div>
+        ${(st.agents || []).map((a, i) => html`<div class="cl-tile ${a.installed ? 'ok' : ''}" style="animation-delay:${140 + i * 70}ms"><div class="cl-tile-top">${ring(a.installed, 'terminal')}<div class="grow"><b>${a.label}</b><div class="tiny muted">${a.installed ? t('installedHere') : t('npmInstaller')}</div></div></div>
+          <div class="row-tight" style="flex-wrap:wrap">${a.installed ? '' : html`<button class="btn sm" data-install="${a.id}">${I('play', 14)}${t('install')}</button>`}<button class="btn sm ghost" data-url="${a.docs}">${I('book', 14)}${t('guide')}</button></div></div>`)}
+        <div class="cl-tile" style="animation-delay:${140 + (st.agents || []).length * 70}ms"><div class="cl-tile-top">${ring(false, 'globe')}<div class="grow"><b>${t('inBrowser')}</b><div class="tiny muted">${(st.browsers || []).length ? t('foundBrowsers', { list: st.browsers.map((b) => b.label).join(', ') }) : t('noBrowser')}</div></div></div>
+          <div class="row-tight" style="flex-wrap:wrap"><button class="btn sm" data-url="${st.web}">${I('external', 14)}claude.ai</button><button class="btn sm" data-url="https://chatgpt.com">${I('external', 14)}ChatGPT</button><button class="btn sm" data-url="https://gemini.google.com">${I('external', 14)}Gemini</button>${chromium.length || !(st.browsers || []).length ? html`<button class="btn sm ghost" data-url="${st.chrome}">${I('external', 14)}Claude in Chrome</button>` : ''}</div></div>
       </div></div>
       <div class="card-body" style="padding-top:0"><button class="btn ghost sm" data-url="${st.docs}">${I('book', 14)}${t('docs')}</button></div>
     </div>
   </div>`);
   const pick = $('goProject'); if (pick) pick.onchange = () => { setProject(pick.value); renderGo(); };
   const ta = $('goal');
-  ta.oninput = () => { goal = ta.value; const b = $('goStart'); if (b) b.disabled = !project() || !goal.trim(); document.querySelector('.cl-cmd').textContent = `${project() ? project().path + '> ' : ''}${CL.startCommand(goal, { connected: connected(), lang: lang() })}`; };
+  ta.oninput = () => { goal = ta.value; const b = $('goStart'); if (b) b.disabled = !project() || !goal.trim(); document.querySelector('.cl-cmd').textContent = `${project() ? project().path + '> ' : ''}${CL.startCommand(goal, { connected: agentConnected(agent), lang: lang(), agent })}`; };
+  for (const b of document.querySelectorAll('[data-agent]')) b.onclick = () => { agent = b.dataset.agent; Hostwerk.storage.set('agent', agent).catch(() => {}); renderGo(); };
+  for (const b of document.querySelectorAll('[data-install]')) b.onclick = () => { const a = agentInfo(b.dataset.install); if (a) Hostwerk.terminal(a.install, { title: t('installAgentTitle', { name: a.label }) }).then(() => Hostwerk.toast(t('typedInTerminal'), { kind: 'success' })).catch(fail); };
   for (const b of document.querySelectorAll('[data-task]')) b.onclick = () => { const x = CL.TASKS.find((y) => y.id === b.dataset.task); if (!goal.trim()) { goal = x[lang()][1]; renderGo(); const a = $('goal'); a.focus(); a.setSelectionRange(goal.length, goal.length); } };
   wireTemplates();
   const run = (withGoal) => {
     const pr = project(); if (!pr) return;
-    if (!st.installed) { Hostwerk.toast(t('codeMissing'), { kind: 'error' }); return; }
-    Hostwerk.terminal(withGoal ? CL.startCommand(goal, { connected: connected(), lang: lang() }) : 'claude', { cwd: pr.path, title: `Claude · ${pr.name}` })
+    if (!agentInstalled(agent)) { Hostwerk.toast(t('agentMissing', { name: ag.label }), { kind: 'error' }); return; }
+    Hostwerk.terminal(withGoal ? CL.startCommand(goal, { connected: agentConnected(agent), lang: lang(), agent }) : ag.bin, { cwd: pr.path, title: `${ag.label} · ${pr.name}` })
       .then(() => Hostwerk.toast(t('typedInTerminal'), { kind: 'success' })).catch(fail);
   };
   $('goStart').onclick = () => run(true);
@@ -119,19 +135,32 @@ async function renderConnect() {
   let targets = [];
   if (pid) { try { targets = await Hostwerk.get(`/claude/targets/${enc(pid)}`); } catch { targets = []; } }
   let kg = null; try { kg = await Hostwerk.get('/knowledge'); } catch { kg = null; }
+  // Befehle für Codex/Gemini CLI und MCP-Einstellungen für andere Apps (Hostwerk ab 3.0; sonst ausgeblendet)
+  let clients = null; try { clients = (await Hostwerk.get('/claude/connect/code')).clients || null; } catch { clients = null; }
+  const agents = st.agents || [];
   Hostwerk.render('#connect', html`<div class="grid grid-2 cl-fade">
-    <div class="card"><div class="card-head">${I('monitor')}<h3>Claude Desktop</h3><span class="badge ${d.connected ? 'ok' : ''}">${d.connected ? t('connected') : d.installed ? t('installed') : t('notFound')}</span></div>
+    <div class="card"><div class="card-head">${I('monitor')}<h3>Claude Desktop</h3><span class="badge">${t('forClaude')}</span><span class="badge ${d.connected ? 'ok' : ''}">${d.connected ? t('connected') : d.installed ? t('installed') : t('notFound')}</span></div>
       <div class="card-body stack" style="gap:var(--sp-3)">${LINK(d.connected, 'monitor')}
         <div class="small muted">${t('desktopText')}</div>
         <div class="row-tight" style="flex-wrap:wrap">${d.connected ? html`<button class="btn" id="deskOff">${t('disconnect')}</button>` : html`<button class="btn primary" id="deskOn" ${d.supported ? '' : raw('disabled')}>${I('link', 14)}${t('connectDesktop')}</button>`}
           ${!d.installed && d.supported ? html`<button class="btn ghost" data-url="${d.download}">${I('download', 14)}${t('getDesktop')}</button>` : ''}</div>
         ${d.wanted && !d.connected ? html`<div class="info-line warn"><span>${t('desktopOverwritten')}</span></div>` : ''}
       </div></div>
-    <div class="card"><div class="card-head">${I('terminal')}<h3>Claude Code</h3><span class="badge ${st.codeConnected ? 'ok' : ''}">${st.codeConnected ? t('connected') : st.installed ? t('installed') : t('notFound')}</span></div>
+    <div class="card"><div class="card-head">${I('terminal')}<h3>Claude Code</h3><span class="badge">${t('forClaude')}</span><span class="badge ${st.codeConnected ? 'ok' : ''}">${st.codeConnected ? t('connected') : st.installed ? t('installed') : t('notFound')}</span></div>
       <div class="card-body stack" style="gap:var(--sp-3)">${LINK(st.codeConnected, 'terminal')}
         <div class="small muted">${t('codeText')}</div>
         <div class="row-tight">${st.installed ? html`<button class="btn ${st.codeConnected ? '' : 'primary'}" id="codeConnect">${I('link', 14)}${st.codeConnected ? t('reconnect') : t('connectCode')}</button>` : html`<span class="small muted">${t('installCodeFirst')}</span>`}</div>
       </div></div>
+    ${clients && agents.length ? html`<div class="card"><div class="card-head">${I('terminal')}<h3>${t('cliTitle')}</h3></div>
+      <div class="card-body stack" style="gap:var(--sp-3)">
+        <div class="small muted">${t('cliText')}</div>
+        ${agents.map((a) => html`<div class="row-tight" style="flex-wrap:wrap"><span class="grow small"><b>${a.label}</b></span><span class="badge ${a.connected ? 'ok' : ''}">${a.connected ? t('connected') : a.installed ? t('installed') : t('notFound')}</span>${a.installed ? html`<button class="btn xs ${a.connected ? '' : 'primary'}" data-cli="${a.id}">${I('link', 13)}${a.connected ? t('reconnect') : t('connectShort')}</button>` : html`<button class="btn xs ghost" data-url="${a.docs}">${I('book', 13)}${t('guide')}</button>`}</div>`)}
+      </div></div>
+    <div class="card"><div class="card-head">${I('plug')}<h3>${t('mcpAppsTitle')}</h3></div>
+      <div class="card-body stack" style="gap:var(--sp-3)">
+        <div class="small muted">${t('mcpAppsText')}</div>
+        <div class="row-tight"><button class="btn" id="copyMcp">${I('copy', 14)}${t('copyMcp')}</button></div>
+      </div></div>` : ''}
     <div class="card"><div class="card-head">${I('file')}<h3>${t('otherTools')}</h3></div>
       <div class="card-body stack" style="gap:var(--sp-3)">
         <div class="small muted">${t('otherToolsText')}</div>
@@ -141,7 +170,8 @@ async function renderConnect() {
     <div class="card"><div class="card-head">${I('graph')}<h3>${t('kgTitle')}</h3>${kg ? html`<span class="badge">${t('kgBuilt', { n: kg.sources.filter((s) => s.built).length })}</span>` : ''}</div>
       <div class="card-body stack" style="gap:var(--sp-3)">
         <div class="small muted">${t('kgText')}</div>
-        <div class="row-tight" style="flex-wrap:wrap"><button class="btn primary" id="openKg">${I('graph', 14)}${t('openKg')}</button><button class="btn ghost" id="copyCtx">${I('copy', 14)}${t('copyContext')}</button><button class="btn ghost" data-url="${st.web}">${I('external', 14)}${t('openWeb')}</button></div>
+        <div class="row-tight" style="flex-wrap:wrap"><button class="btn primary" id="openKg">${I('graph', 14)}${t('openKg')}</button><button class="btn ghost" id="copyCtx">${I('copy', 14)}${t('copyContext')}</button></div>
+        <div class="row-tight" style="flex-wrap:wrap"><button class="btn sm ghost" data-url="${st.web}">${I('external', 13)}claude.ai</button><button class="btn sm ghost" data-url="https://chatgpt.com">${I('external', 13)}ChatGPT</button><button class="btn sm ghost" data-url="https://gemini.google.com">${I('external', 13)}Gemini</button></div>
         <div class="tiny muted">${t('kgHint')}</div>
       </div></div>
   </div>`);
@@ -149,6 +179,8 @@ async function renderConnect() {
   if ($('deskOn')) $('deskOn').onclick = () => desk(true);
   if ($('deskOff')) $('deskOff').onclick = () => desk(false);
   if ($('codeConnect')) $('codeConnect').onclick = async () => { try { const r = await Hostwerk.get('/claude/connect/code'); await Hostwerk.terminal(r.command, { title: t('connectCodeTitle') }); Hostwerk.toast(t('typedInTerminal'), { kind: 'success' }); } catch (e) { fail(e); } };
+  for (const b of document.querySelectorAll('[data-cli]')) b.onclick = async () => { const a = agents.find((x) => x.id === b.dataset.cli); try { await Hostwerk.terminal(clients.commands[a.id], { title: t('connectAgentTitle', { name: a.label }) }); Hostwerk.toast(t('typedInTerminal'), { kind: 'success' }); } catch (e) { fail(e); } };
+  if ($('copyMcp')) $('copyMcp').onclick = () => Hostwerk.copy(clients.json).then(() => Hostwerk.toast(t('mcpCopied'), { kind: 'success' })).catch(fail);
   const cp = $('conProject'); if (cp) cp.onchange = () => { setProject(cp.value); renderConnect(); };
   for (const b of document.querySelectorAll('[data-target]')) b.onclick = async () => {
     try { const c = await Hostwerk.get(`/mind/context?clusters=ich,allgemein&project=${enc(pid)}`); const r = await Hostwerk.post(`/claude/write/${enc(pid)}`, { target: b.dataset.target, markdown: c.md }); Hostwerk.toast(t(r.created ? 'created' : 'updated', { file: r.file }), { kind: 'success' }); renderConnect(); } catch (e) { fail(e); }
@@ -190,6 +222,7 @@ async function renderTokens() {
   const d = tools; const list = d.tools.filter((x) => !x.builtin);
   const days = (usage && usage.days) || []; const s = CL.usageSummary(days);
   Hostwerk.render('#tokens', html`<div class="cl-stack cl-fade">
+    <div class="small muted">${t('tokensClaudeOnly')}</div>
     ${!d.claude ? html`<div class="callout warn"><b>${t('codeNotFound')}</b> ${t('codeNotFoundText')}</div>` : ''}
     ${budget(days)}
     <div class="grid grid-2">
@@ -275,13 +308,14 @@ async function renderTips() {
   const extra = (tools.tips || []).filter((x) => !tipCat && (!tipQ || `${x.title} ${x.text}`.toLowerCase().includes(tipQ.toLowerCase())));
   const art = (cat) => raw(`<svg class="cl-cat-art" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CAT_ART[cat] || CL.ICON.bulb}</svg>`);
   Hostwerk.render('#tips', html`<div class="cl-stack cl-fade">
+    <div class="small muted">${t('tipsIntro')}</div>
     <div class="cl-tipbar">
       <input class="input" id="tipQ" type="search" placeholder="${t('tipSearch')}" aria-label="${t('tipSearch')}" value="${tipQ}">
       <div class="seg" role="group" aria-label="${t('categories')}"><button class="${tipCat ? '' : 'on'}" aria-pressed="${tipCat ? 'false' : 'true'}" data-cat="">${t('all')}</button>${CL.CATS.map((c) => html`<button class="${tipCat === c.id ? 'on' : ''}" aria-pressed="${tipCat === c.id ? 'true' : 'false'}" data-cat="${c.id}">${L(c)}</button>`)}</div>
     </div>
     ${!own.length && !extra.length ? html`<div class="empty"><b>${t('noTips')}</b></div>` : ''}
     <div class="cl-tips">${own.map((x, i) => { const [title, text] = x[lang()] || x.de; const code = lang() === 'en' && x.codeEn ? x.codeEn : x.code; const key = lang() === 'en' && x.keyEn ? x.keyEn : x.key; return html`<article class="cl-tip" style="animation-delay:${Math.min(i, 12) * 35}ms">
-      <div class="cl-tip-top"><div class="cl-tip-art">${art(x.cat)}</div><h3>${title}</h3></div>
+      <div class="cl-tip-top"><div class="cl-tip-art">${art(x.cat)}</div><h3>${title}</h3>${x.only === 'claude' ? html`<span class="badge">Claude Code</span>` : ''}</div>
       <p>${text}</p>
       <div class="cl-tip-foot">${key ? html`<span class="cl-key">${key}</span>` : ''}${code ? html`<code class="cl-cmd">${code}</code><button class="btn xs ghost" data-copy="${code}" title="${t('copy')}" aria-label="${t('copy')}">${I('copy', 13)}</button>` : ''}${x.action ? html`<button class="btn xs" data-go="${x.action}">${t(`go_${x.action}`)}</button>` : ''}</div>
     </article>`; })}</div>

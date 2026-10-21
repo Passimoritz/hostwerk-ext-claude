@@ -1,5 +1,5 @@
 /*
- * Claude – reine Hilfsfunktionen und Inhalte (ohne Hostwerk/DOM), damit sie sich mit node --test prüfen lassen.
+ * KI-Anbindung – reine Hilfsfunktionen und Inhalte (ohne Hostwerk/DOM), damit sie sich mit node --test prüfen lassen.
  * Im Browser als globales CL, in Node per require.
  */
 (function (root, factory) {
@@ -11,12 +11,26 @@
   /** Für die Windows- und Linux-Shell: in doppelte Anführungszeichen, ohne Zeilenumbrüche und doppelte Anführungszeichen. */
   function shellQuote(s) { return `"${String(s).replace(/"/g, "'").replace(/[\r\n]+/g, ' ').trim()}"`; }
 
-  /** Befehl für „Loslegen“: nur „claude“ oder „claude "<Auftrag>"“ (mit Hinweis auf das Gedankennetz, wenn verbunden). */
-  function startCommand(goal, { connected = false, lang = 'de' } = {}) {
+  /**
+   * KI-Werkzeuge fürs Terminal, die „Loslegen“ im Projektordner startet. arg = wie der Auftrag übergeben wird
+   * (Claude Code und Codex: als erstes Argument; Gemini CLI: mit -i, damit die Sitzung danach offen bleibt).
+   * Die Anbindung ans Gedankennetz (MCP) richtet „Verbinden“ ein – für Claude über Claude Code, für die anderen über
+   * deren eigenes „mcp add“.
+   */
+  const AGENTS = [
+    { id: 'claude', bin: 'claude', label: 'Claude Code', arg: '' },
+    { id: 'codex', bin: 'codex', label: 'Codex CLI', arg: '' },
+    { id: 'gemini', bin: 'gemini', label: 'Gemini CLI', arg: '-i ' },
+  ];
+  const agentOf = (id) => AGENTS.find((a) => a.id === id) || AGENTS[0];
+
+  /** Befehl für „Loslegen“: nur „claude“ bzw. „codex“/„gemini“ oder mit Auftrag (+ Hinweis auf das Gedankennetz, wenn verbunden). */
+  function startCommand(goal, { connected = false, lang = 'de', agent = 'claude' } = {}) {
+    const a = agentOf(agent);
     const g = String(goal || '').trim();
-    if (!g) return 'claude';
+    if (!g) return a.bin;
     const hint = connected ? (lang === 'en' ? ' – read what I decided with gedankennetz_lesen first.' : ' – lies vorher mit gedankennetz_lesen, was ich festgelegt habe.') : '';
-    return `claude ${shellQuote(g + hint)}`;
+    return `${a.bin} ${a.arg}${shellQuote(g + hint)}`;
   }
 
   /** Verbrauch: Summen und Höchstwert für das Balkendiagramm. */
@@ -45,29 +59,31 @@
 
   /**
    * Tipps & Tricks. cat: context | prompt | keys | hostwerk. code = zum Kopieren, key = Taste(n).
-   * Nur Funktionen, die Claude Code wirklich hat (Stand der offiziellen Doku).
+   * only: 'claude' = gilt nur für Claude Code (Stand der offiziellen Doku) – die Seite kennzeichnet das; alle anderen
+   * Tipps helfen mit jeder KI.
    */
   const TIPS = [
-    { id: 'clear', cat: 'context', code: '/clear', de: ['Neue Aufgabe, neuer Verlauf', '/clear leert das Gespräch. Was Claude dauerhaft wissen soll, gehört in die CLAUDE.md – dann muss es nicht jedes Mal mitgeschleppt werden.'], en: ['New task, new history', '/clear empties the conversation. What Claude should always know belongs in CLAUDE.md – then it doesn’t have to be carried along every time.'] },
-    { id: 'compact', cat: 'context', code: '/compact ', de: ['Zusammenfassen statt neu anfangen', '/compact fasst den bisherigen Verlauf zusammen. Mit einem Hinweis behält Claude das Wichtige, z. B. „/compact behalte die API-Änderungen“.'], en: ['Summarise instead of starting over', '/compact summarises the history so far. Add a hint and Claude keeps what matters, e.g. “/compact keep the API changes”.'] },
-    { id: 'claudemd', cat: 'context', code: '/init', de: ['CLAUDE.md kurz halten', 'Sie wird in jeder Sitzung geladen. Nur Regeln, Befehle und Fallen hinein – keine Romane. /init legt eine erste Fassung an.'], en: ['Keep CLAUDE.md short', 'It’s loaded in every session. Only rules, commands and pitfalls – no novels. /init creates a first draft.'] },
-    { id: 'at', cat: 'context', code: '@', de: ['Dateien mit @ nennen', '„@src/app.js“ statt „schau dich mal um“ – Claude liest genau diese Datei und spart sich die Suche.'], en: ['Name files with @', '“@src/app.js” instead of “have a look around” – Claude reads exactly that file and skips the search.'] },
+    { id: 'clear', only: 'claude', cat: 'context', code: '/clear', de: ['Neue Aufgabe, neuer Verlauf', '/clear leert das Gespräch. Was Claude dauerhaft wissen soll, gehört in die CLAUDE.md – dann muss es nicht jedes Mal mitgeschleppt werden.'], en: ['New task, new history', '/clear empties the conversation. What Claude should always know belongs in CLAUDE.md – then it doesn’t have to be carried along every time.'] },
+    { id: 'compact', only: 'claude', cat: 'context', code: '/compact ', de: ['Zusammenfassen statt neu anfangen', '/compact fasst den bisherigen Verlauf zusammen. Mit einem Hinweis behält Claude das Wichtige, z. B. „/compact behalte die API-Änderungen“.'], en: ['Summarise instead of starting over', '/compact summarises the history so far. Add a hint and Claude keeps what matters, e.g. “/compact keep the API changes”.'] },
+    { id: 'claudemd', only: 'claude', cat: 'context', code: '/init', de: ['CLAUDE.md kurz halten', 'Sie wird in jeder Sitzung geladen. Nur Regeln, Befehle und Fallen hinein – keine Romane. /init legt eine erste Fassung an.'], en: ['Keep CLAUDE.md short', 'It’s loaded in every session. Only rules, commands and pitfalls – no novels. /init creates a first draft.'] },
+    { id: 'at', only: 'claude', cat: 'context', code: '@', de: ['Dateien mit @ nennen', '„@src/app.js“ statt „schau dich mal um“ – Claude liest genau diese Datei und spart sich die Suche.'], en: ['Name files with @', '“@src/app.js” instead of “have a look around” – Claude reads exactly that file and skips the search.'] },
     { id: 'logs', cat: 'context', de: ['Lange Ausgaben kürzen', 'Keine kompletten Protokolle einfügen: nur die Fehlerzeilen oder das Ende (z. B. „| tail -50“). Jede Zeile kostet Tokens – bei jeder weiteren Nachricht wieder.'], en: ['Trim long output', 'Don’t paste whole logs: only the error lines or the end (e.g. “| tail -50”). Every line costs tokens – again with every following message.'] },
-    { id: 'mcp', cat: 'context', code: '/mcp', de: ['Unbenutzte MCP-Server abschalten', 'Jeder MCP-Server bringt Werkzeug-Beschreibungen mit, die in jeder Anfrage stecken. /mcp zeigt, was eingebunden ist.'], en: ['Turn off unused MCP servers', 'Every MCP server brings tool descriptions that are part of every request. /mcp shows what’s connected.'] },
-    { id: 'agents', cat: 'context', code: '/agents', de: ['Teilagenten für die Suche', 'Lass Claude große Erkundungen an Teilagenten abgeben – deren Zwischenschritte landen nicht im Hauptverlauf. /agents verwaltet eigene Teilagenten.'], en: ['Subagents for searching', 'Let Claude hand big explorations to subagents – their intermediate steps don’t end up in the main history. /agents manages your own subagents.'] },
-    { id: 'plan', cat: 'prompt', key: 'Shift+Tab', de: ['Erst planen, dann bauen', 'Shift+Tab schaltet die Modi durch bis zum Plan-Modus: Claude liest und schlägt einen Plan vor, ändert aber nichts, bis du zustimmst.'], en: ['Plan first, then build', 'Shift+Tab cycles through the modes to plan mode: Claude reads and proposes a plan but changes nothing until you agree.'] },
-    { id: 'done', cat: 'prompt', de: ['Sag, woran „fertig“ zu erkennen ist', '„…und lass danach die Tests laufen“ oder „die Seite soll ohne Fehler in der Konsole laden“ – mit einem klaren Ziel arbeitet Claude gezielter.'], en: ['Say what “done” looks like', '“…and run the tests afterwards” or “the page should load without console errors” – with a clear goal Claude works more precisely.'] },
-    { id: 'images', cat: 'prompt', key: 'Strg+V', keyEn: 'Ctrl+V', de: ['Bilder zeigen', 'Screenshots einfach einfügen – Claude sieht sie. Ein Bild von der kaputten Seite sagt oft mehr als drei Sätze.'], en: ['Show pictures', 'Just paste screenshots – Claude can see them. A picture of the broken page often says more than three sentences.'] },
+    { id: 'mcp', only: 'claude', cat: 'context', code: '/mcp', de: ['Unbenutzte MCP-Server abschalten', 'Jeder MCP-Server bringt Werkzeug-Beschreibungen mit, die in jeder Anfrage stecken. /mcp zeigt, was eingebunden ist.'], en: ['Turn off unused MCP servers', 'Every MCP server brings tool descriptions that are part of every request. /mcp shows what’s connected.'] },
+    { id: 'agents', only: 'claude', cat: 'context', code: '/agents', de: ['Teilagenten für die Suche', 'Lass Claude große Erkundungen an Teilagenten abgeben – deren Zwischenschritte landen nicht im Hauptverlauf. /agents verwaltet eigene Teilagenten.'], en: ['Subagents for searching', 'Let Claude hand big explorations to subagents – their intermediate steps don’t end up in the main history. /agents manages your own subagents.'] },
+    { id: 'plan', only: 'claude', cat: 'prompt', key: 'Shift+Tab', de: ['Erst planen, dann bauen', 'Shift+Tab schaltet die Modi durch bis zum Plan-Modus: Claude liest und schlägt einen Plan vor, ändert aber nichts, bis du zustimmst.'], en: ['Plan first, then build', 'Shift+Tab cycles through the modes to plan mode: Claude reads and proposes a plan but changes nothing until you agree.'] },
+    { id: 'done', cat: 'prompt', de: ['Sag, woran „fertig“ zu erkennen ist', '„…und lass danach die Tests laufen“ oder „die Seite soll ohne Fehler in der Konsole laden“ – mit einem klaren Ziel arbeitet jede KI gezielter.'], en: ['Say what “done” looks like', '“…and run the tests afterwards” or “the page should load without console errors” – with a clear goal any AI works more precisely.'] },
+    { id: 'images', cat: 'prompt', key: 'Strg+V', keyEn: 'Ctrl+V', de: ['Bilder zeigen', 'Screenshots einfach einfügen – Claude Code, Codex und Gemini CLI sehen sie. Ein Bild von der kaputten Seite sagt oft mehr als drei Sätze.'], en: ['Show pictures', 'Just paste screenshots – Claude Code, Codex and Gemini CLI can see them. A picture of the broken page often says more than three sentences.'] },
     { id: 'steps', cat: 'prompt', de: ['In Etappen arbeiten', 'Große Umbauten in kleine Schritte teilen und nach jedem kurz prüfen. Fehler fallen früh auf, und der Verlauf bleibt übersichtlich.'], en: ['Work in stages', 'Split big changes into small steps and check after each one. Mistakes show up early and the history stays clear.'] },
-    { id: 'esc', cat: 'keys', key: 'Esc', de: ['Esc unterbricht', 'Esc stoppt Claude sofort, ohne den Verlauf zu verlieren. Zweimal Esc springt zu einer früheren Nachricht zurück, um sie anders zu stellen.'], en: ['Esc interrupts', 'Esc stops Claude right away without losing the history. Press Esc twice to jump back to an earlier message and rephrase it.'] },
-    { id: 'bang', cat: 'keys', code: '!git status', de: ['! für Shell-Befehle', 'Eine Zeile mit ! am Anfang läuft direkt in der Shell – die Ausgabe sieht Claude gleich mit.'], en: ['! for shell commands', 'A line starting with ! runs straight in the shell – Claude sees the output too.'] },
-    { id: 'continue', cat: 'keys', code: 'claude --continue', de: ['Weitermachen, wo du warst', '„claude --continue“ setzt das letzte Gespräch im Ordner fort, „claude --resume“ lässt dich eins auswählen.'], en: ['Pick up where you left off', '“claude --continue” resumes the last conversation in the folder, “claude --resume” lets you choose one.'] },
-    { id: 'commands', cat: 'keys', code: '.claude/commands/', de: ['Eigene /Befehle', 'Markdown-Dateien in .claude/commands/ werden zu eigenen /Befehlen – praktisch für Abläufe, die du oft brauchst.'], en: ['Your own /commands', 'Markdown files in .claude/commands/ become your own /commands – handy for routines you use a lot.'] },
-    { id: 'model', cat: 'keys', code: '/model', de: ['Passendes Modell wählen', '/model wechselt das Modell – für kleine, klare Aufgaben reicht oft ein schnelleres.'], en: ['Choose the right model', '/model switches the model – for small, clear tasks a faster one is often enough.'] },
-    { id: 'print', cat: 'keys', code: 'claude -p "Fasse die letzten Commits zusammen"', codeEn: 'claude -p "Summarise the last commits"', de: ['Ohne Sitzung, für Skripte', '„claude -p …“ gibt die Antwort aus und beendet sich – gut für Aufgaben in Hostwerk oder eigene Skripte.'], en: ['Without a session, for scripts', '“claude -p …” prints the answer and exits – good for Hostwerk tasks or your own scripts.'] },
-    { id: 'graph', cat: 'hostwerk', action: 'graph', de: ['Graph fragen statt Dateien lesen', 'Mit der Erweiterung „Wissensgraph“ fragt Claude den Graphen deines Projekts, statt Dutzende Dateien zu öffnen.'], en: ['Ask the graph instead of reading files', 'With the “Knowledge graph” extension Claude queries your project’s graph instead of opening dozens of files.'] },
-    { id: 'start', cat: 'hostwerk', action: 'go', de: ['Direkt im Projekt starten', '„Loslegen“ öffnet Claude im richtigen Ordner im Hostwerk-Terminal – mit deinem Auftrag schon eingetippt.'], en: ['Start right in the project', '“Get going” opens Claude in the right folder in the Hostwerk terminal – with your task already typed in.'] },
-    { id: 'measure', cat: 'hostwerk', action: 'tokens', de: ['Messen, ob es wirkt', 'Unter „Token sparen“ zeigt „Messen“ den Verbrauch je Tag – so siehst du, ob ein Werkzeug oder Tipp etwas bringt.'], en: ['Measure whether it works', 'Under “Save tokens”, “Measure” shows usage per day – so you see whether a tool or tip helps.'] },
+    { id: 'esc', only: 'claude', cat: 'keys', key: 'Esc', de: ['Esc unterbricht', 'Esc stoppt Claude sofort, ohne den Verlauf zu verlieren. Zweimal Esc springt zu einer früheren Nachricht zurück, um sie anders zu stellen.'], en: ['Esc interrupts', 'Esc stops Claude right away without losing the history. Press Esc twice to jump back to an earlier message and rephrase it.'] },
+    { id: 'bang', only: 'claude', cat: 'keys', code: '!git status', de: ['! für Shell-Befehle', 'Eine Zeile mit ! am Anfang läuft direkt in der Shell – die Ausgabe sieht Claude gleich mit.'], en: ['! for shell commands', 'A line starting with ! runs straight in the shell – Claude sees the output too.'] },
+    { id: 'continue', only: 'claude', cat: 'keys', code: 'claude --continue', de: ['Weitermachen, wo du warst', '„claude --continue“ setzt das letzte Gespräch im Ordner fort, „claude --resume“ lässt dich eins auswählen.'], en: ['Pick up where you left off', '“claude --continue” resumes the last conversation in the folder, “claude --resume” lets you choose one.'] },
+    { id: 'commands', only: 'claude', cat: 'keys', code: '.claude/commands/', de: ['Eigene /Befehle', 'Markdown-Dateien in .claude/commands/ werden zu eigenen /Befehlen – praktisch für Abläufe, die du oft brauchst.'], en: ['Your own /commands', 'Markdown files in .claude/commands/ become your own /commands – handy for routines you use a lot.'] },
+    { id: 'model', only: 'claude', cat: 'keys', code: '/model', de: ['Passendes Modell wählen', '/model wechselt das Modell – für kleine, klare Aufgaben reicht oft ein schnelleres.'], en: ['Choose the right model', '/model switches the model – for small, clear tasks a faster one is often enough.'] },
+    { id: 'print', only: 'claude', cat: 'keys', code: 'claude -p "Fasse die letzten Commits zusammen"', codeEn: 'claude -p "Summarise the last commits"', de: ['Ohne Sitzung, für Skripte', '„claude -p …“ gibt die Antwort aus und beendet sich – gut für Aufgaben in Hostwerk oder eigene Skripte.'], en: ['Without a session, for scripts', '“claude -p …” prints the answer and exits – good for Hostwerk tasks or your own scripts.'] },
+    { id: 'rulesfile', cat: 'context', code: 'AGENTS.md', de: ['Eine Anweisungsdatei je Projekt', 'Codex, Cursor, Zed und Copilot lesen AGENTS.md, Gemini CLI GEMINI.md, Claude Code CLAUDE.md. Kurz halten: Regeln, Befehle, Fallen. Unter „Verbinden“ schreibt Hostwerk dein Gedankennetz hinein.'], en: ['One instructions file per project', 'Codex, Cursor, Zed and Copilot read AGENTS.md, Gemini CLI reads GEMINI.md, Claude Code CLAUDE.md. Keep it short: rules, commands, pitfalls. Under “Connect” Hostwerk writes your thought net into it.'] },
+    { id: 'graph', cat: 'hostwerk', action: 'graph', de: ['Graph fragen statt Dateien lesen', 'Mit der Erweiterung „Wissensgraph“ fragt deine KI den Graphen deines Projekts, statt Dutzende Dateien zu öffnen.'], en: ['Ask the graph instead of reading files', 'With the “Knowledge graph” extension your AI queries your project’s graph instead of opening dozens of files.'] },
+    { id: 'start', cat: 'hostwerk', action: 'go', de: ['Direkt im Projekt starten', '„Loslegen“ öffnet Claude Code, Codex oder Gemini CLI im richtigen Ordner im Hostwerk-Terminal – mit deinem Auftrag schon eingetippt.'], en: ['Start right in the project', '“Get going” opens Claude Code, Codex or Gemini CLI in the right folder in the Hostwerk terminal – with your task already typed in.'] },
+    { id: 'measure', cat: 'hostwerk', action: 'tokens', only: 'claude', de: ['Messen, ob es wirkt', 'Unter „Token sparen“ zeigt „Messen“ den Verbrauch von Claude Code je Tag – so siehst du, ob ein Werkzeug oder Tipp etwas bringt.'], en: ['Measure whether it works', 'Under “Save tokens”, “Measure” shows Claude Code’s usage per day – so you see whether a tool or tip helps.'] },
   ];
   const CATS = [
     { id: 'context', de: 'Kontext klein halten', en: 'Keep the context small' },
@@ -142,5 +158,5 @@
     return { today, pct, level: !limit || today == null ? 'none' : pct >= 100 ? 'over' : pct >= 80 ? 'warn' : 'ok' };
   }
 
-  return { shellQuote, startCommand, usageSummary, TASKS, TIPS, CATS, filterTips, ICON, icon, cleanTemplates, exportTemplates, importTemplates, budgetState };
+  return { AGENTS, agentOf, shellQuote, startCommand, usageSummary, TASKS, TIPS, CATS, filterTips, ICON, icon, cleanTemplates, exportTemplates, importTemplates, budgetState };
 }));

@@ -9,6 +9,22 @@ test('Startbefehl: ohne Auftrag nur „claude“, mit Auftrag sicher in Anführu
   assert.ok(CL.startCommand('Fix', { connected: true, lang: 'en' }).includes('read what I decided'));
 });
 
+test('Startbefehl für jede KI: Codex mit Auftrag als Argument, Gemini CLI mit -i, Unbekanntes → Claude Code', () => {
+  assert.deepStrictEqual(CL.AGENTS.map((a) => a.id), ['claude', 'codex', 'gemini']);
+  assert.strictEqual(CL.startCommand('', { agent: 'codex' }), 'codex');
+  assert.strictEqual(CL.startCommand('Fix it', { agent: 'codex' }), 'codex "Fix it"');
+  assert.strictEqual(CL.startCommand('Fix it', { agent: 'gemini' }), 'gemini -i "Fix it"');
+  assert.ok(CL.startCommand('Fix', { agent: 'gemini', connected: true }).includes('gedankennetz_lesen'));
+  assert.strictEqual(CL.startCommand('', { agent: 'gibt-es-nicht' }), 'claude');
+});
+
+test('Tipps: Claude-eigene sind gekennzeichnet, allgemeine nennen Claude nicht als einzige KI', () => {
+  assert.ok(CL.TIPS.some((x) => x.only === 'claude') && CL.TIPS.some((x) => !x.only));
+  for (const x of CL.TIPS.filter((y) => !y.only)) {
+    for (const l of ['de', 'en']) assert.ok(!/\bClaude\b/.test(x[l][1].replace(/Claude Code/g, '')), `${x.id}/${l} nennt nur Claude`);
+  }
+});
+
 test('Verbrauch: Summen, Schnitt und Trend', () => {
   const days = [{ total: 100, input: 50, output: 10, cacheRead: 40 }, { total: 100 }, { total: 50 }, { total: 50 }];
   const s = CL.usageSummary(days);
