@@ -76,3 +76,45 @@ test('Token-Tagesgrenze: heutiger Tag, Stufen 80 % und 100 %', () => {
   assert.strictEqual(CL.budgetState([{ date: '2026-10-20', total: 1 }], 1000, now).today, null, 'nothing measured today');
   assert.strictEqual(CL.budgetState(days, 0, now).level, 'none');
 });
+
+test('KI-Apps als Daten: jede mit Weg, Anleitung und Symbol; unbekannte → allgemeiner MCP-Weg; Claude ist eine von vielen', () => {
+  const ids = CL.CLIENTS.map((c) => c.id);
+  assert.ok(['claude-desktop', 'claude-code', 'codex', 'gemini', 'cursor', 'vscode', 'windsurf', 'lmstudio', 'continue', 'other'].every((x) => ids.includes(x)));
+  assert.strictEqual(new Set(ids).size, ids.length);
+  for (const c of CL.CLIENTS) {
+    assert.ok(['desktop', 'cli', 'file'].includes(c.how), c.id);
+    assert.ok(/^https:\/\//.test(c.docs), `${c.id}: Anleitung`);
+    assert.ok(CL.ICON[c.icon], `${c.id}: Symbol`);
+    if (c.how === 'cli') assert.ok(CL.AGENTS.some((a) => a.id === c.agent), `${c.id}: Werkzeug`);
+    if (c.how === 'file') assert.ok(['mcpServers', 'servers'].includes(c.format), `${c.id}: Schreibweise`);
+  }
+  assert.ok(CL.CLIENTS.filter((c) => /claude/.test(c.id)).length < CL.CLIENTS.length / 3);
+  assert.strictEqual(CL.clientOf('gibt-es-nicht').id, 'other');
+});
+
+test('MCP-Einstellungen je App: Claude/Cursor-Schreibweise (mcpServers) und VS Code (servers, type stdio)', () => {
+  const json = JSON.stringify({ mcpServers: { hostwerk: { command: 'C:\\Programme\\Hostwerk\\Hostwerk.exe', args: ['C:\\x\\hostwerk-mcp.js', 'cfg.json'], env: { ELECTRON_RUN_AS_NODE: '1' } } } });
+  const cur = JSON.parse(CL.clientConfig('cursor', json));
+  assert.deepStrictEqual(cur.mcpServers.hostwerk.args, ['C:\\x\\hostwerk-mcp.js', 'cfg.json']);
+  assert.strictEqual(cur.mcpServers.hostwerk.env.ELECTRON_RUN_AS_NODE, '1');
+  const vs = JSON.parse(CL.clientConfig('vscode', json));
+  assert.strictEqual(vs.servers.hostwerk.type, 'stdio');
+  assert.strictEqual(vs.servers.hostwerk.command, 'C:\\Programme\\Hostwerk\\Hostwerk.exe');
+  const other = JSON.parse(CL.clientConfig('irgendwas', { command: 'node', args: [] }));
+  assert.ok(other.mcpServers.hostwerk && !other.mcpServers.hostwerk.env);
+  assert.strictEqual(CL.clientConfig('cursor', 'kein json'), '');
+});
+
+test('Manifest: Seite steckt im KI-Helfer (ganze Seite als Reiter), kein eigener Eintrag in der Seitenleiste, Texte neutral', () => {
+  const m = require('../manifest.json');
+  const tab = m.contributes.tabs.find((x) => x.page);
+  assert.ok(tab && tab.on === 'area:ai' && tab.file === m.page.file && tab.id === 'anbindung');
+  assert.strictEqual(m.page.nav, false);
+  for (const l of ['de', 'en']) {
+    assert.ok(!/Claude/.test(m.name[l]) && !/Claude/.test(m.page.title[l]));
+    for (const t of m.page.tabs) assert.ok(!/Claude/.test(t.title[l]), `Reiter ${t.id}/${l}`);
+    assert.ok(/Cursor/.test(m.description[l]) && /MCP/.test(m.description[l]));
+  }
+  const de = require('../locales/de.json'); const en = require('../locales/en.json');
+  assert.deepStrictEqual(Object.keys(de).sort(), Object.keys(en).sort());
+});

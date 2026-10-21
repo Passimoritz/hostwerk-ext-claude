@@ -27,6 +27,7 @@ let templates = [];    // eigene Auftrags-Vorlagen (Hostwerk.storage – für al
 let settings = {};     // manifest.settings (Token-Tagesgrenze)
 let loadError = null;  // Grunddaten nicht geladen → Fehlerzustand mit „Erneut versuchen“
 let agent = 'claude';  // gewähltes KI-Werkzeug für „Loslegen“ (claude | codex | gemini)
+let client = null;     // gewählte KI-App unter „Verbinden“ (CL.CLIENTS)
 const locale = () => Hostwerk.lang || 'de';
 
 // Andere KI-Werkzeuge im Terminal meldet Hostwerk ab 3.0 (st.agents); ältere Versionen kennen nur Claude
@@ -41,6 +42,7 @@ async function loadBase() {
   [st, projects] = await Promise.all([Hostwerk.get('/claude/status'), Hostwerk.get('/projects').catch(() => [])]);
   try { templates = (await Hostwerk.storage.get('templates')) || []; } catch { templates = []; }
   try { const a = await Hostwerk.storage.get('agent'); if (a && CL.AGENTS.some((x) => x.id === a)) agent = a; } catch { /* Standard: Claude Code */ }
+  try { const c = await Hostwerk.storage.get('client'); if (c && CL.CLIENTS.some((x) => x.id === c)) client = c; } catch { /* noch keine Wahl */ }
   try { settings = (await Hostwerk.settings.get()) || {}; } catch { settings = {}; }
   if (!pid) { try { pid = await Hostwerk.storage.get('project'); } catch { pid = null; } }
   if (!pid || !projects.some((p) => p.id === pid)) pid = projects[0] ? projects[0].id : null;
@@ -129,38 +131,60 @@ function wireUrls() { for (const b of document.querySelectorAll('[data-url]')) b
 /* ================================================================ Verbinden */
 const LINK = (on, glyph) => raw(`<svg class="cl-link ${on ? 'on' : ''}" viewBox="0 0 120 40" aria-hidden="true"><rect class="node" x="2" y="6" width="28" height="28" rx="8"/><g transform="translate(8 12)"><svg width="16" height="16" viewBox="0 0 24 24" class="glyph">${CL.ICON[glyph]}</svg></g><path class="wire" d="M31 20h58"/><rect class="node b" x="90" y="6" width="28" height="28" rx="8"/><g transform="translate(96 12)"><svg width="16" height="16" viewBox="0 0 24 24" class="glyph">${CL.ICON.sparkles}</svg></g></svg>`);
 
+/** Status einer KI-App: verbunden / installiert / unbekannt (Apps mit Einstellungsdatei meldet Hostwerk nicht). */
+function clientState(c) {
+  if (!st) return null;
+  if (c.how === 'desktop') return st.desktop.connected ? 'connected' : st.desktop.installed ? 'installed' : 'missing';
+  if (c.how === 'cli') return agentConnected(c.agent) ? 'connected' : agentInstalled(c.agent) ? 'installed' : (c.agent === 'claude' || agentInfo(c.agent)) ? 'missing' : null;
+  return null;
+}
+const clientName = (c) => c.label || t('otherClient');
+
+/** Einrichtung der gewählten App: Hostwerk trägt sich ein, tippt den offiziellen Befehl oder liefert die Einstellungen. */
+function clientDetail(c, clients) {
+  const s = clientState(c);
+  const docs = html`<button class="btn sm ghost" data-url="${c.docs}">${I('book', 13)}${t('guide')}</button>`;
+  if (c.how === 'desktop') {
+    const d = st.desktop;
+    return html`<div class="stack" style="gap:var(--sp-3)">${LINK(d.connected, 'monitor')}
+      <div class="small muted">${t('desktopText')}</div>
+      <div class="row-tight" style="flex-wrap:wrap">${d.connected ? html`<button class="btn" id="deskOff">${t('disconnect')}</button>` : html`<button class="btn primary" id="deskOn" ${d.supported ? '' : raw('disabled')}>${I('link', 14)}${t('connectDesktop')}</button>`}
+        ${!d.installed && d.supported ? html`<button class="btn ghost" data-url="${d.download}">${I('download', 14)}${t('getDesktop')}</button>` : ''}${docs}</div>
+      ${!d.supported ? html`<div class="small muted">${t('desktopLinux')}</div>` : ''}
+      ${d.wanted && !d.connected ? html`<div class="info-line warn"><span>${t('desktopOverwritten')}</span></div>` : ''}</div>`;
+  }
+  if (c.how === 'cli') {
+    const can = c.agent === 'claude' || (clients && clients.commands && clients.commands[c.agent]);
+    return html`<div class="stack" style="gap:var(--sp-3)">${LINK(s === 'connected', 'terminal')}
+      <div class="small muted">${t('cliOneText', { name: clientName(c) })}</div>
+      <div class="row-tight" style="flex-wrap:wrap">${s === 'missing' || !can ? html`<span class="small muted grow">${t('installFirst', { name: clientName(c) })}</span>` : html`<button class="btn ${s === 'connected' ? '' : 'primary'}" data-cli="${c.id}">${I('link', 14)}${s === 'connected' ? t('reconnect') : t('connectNamed', { name: clientName(c) })}</button>`}${docs}</div></div>`;
+  }
+  const conf = clients ? CL.clientConfig(c.id, clients.json) : '';
+  const where = !c.file ? t('otherClientText') : /^~/.test(c.file) ? t('clientFileText', { file: c.file }) : t('clientProjectFileText', { file: c.file });
+  return html`<div class="stack" style="gap:var(--sp-3)">
+    <div class="small muted">${where}</div>
+    ${conf ? html`<pre class="cl-cmd cl-conf" tabindex="0" aria-label="${t('mcpSettings')}">${conf}</pre>` : html`<div class="small muted">${t('needsNewerHostwerk')}</div>`}
+    <div class="row-tight" style="flex-wrap:wrap">${conf ? html`<button class="btn primary" id="copyConf">${I('copy', 14)}${t('copyMcp')}</button>` : ''}${c.file ? html`<button class="btn ghost" id="copyPath">${I('copy', 14)}${t('copyPath')}</button>` : ''}${docs}</div></div>`;
+}
+
 async function renderConnect() {
   if (!st) return;
-  const d = st.desktop;
   let targets = [];
   if (pid) { try { targets = await Hostwerk.get(`/claude/targets/${enc(pid)}`); } catch { targets = []; } }
   let kg = null; try { kg = await Hostwerk.get('/knowledge'); } catch { kg = null; }
-  // Befehle für Codex/Gemini CLI und MCP-Einstellungen für andere Apps (Hostwerk ab 3.0; sonst ausgeblendet)
-  let clients = null; try { clients = (await Hostwerk.get('/claude/connect/code')).clients || null; } catch { clients = null; }
-  const agents = st.agents || [];
+  // Befehle (Claude Code, Codex, Gemini CLI) und MCP-Einstellungen für alle anderen Apps (Hostwerk ab 3.0)
+  let code = null; try { code = await Hostwerk.get('/claude/connect/code'); } catch { code = null; }
+  const clients = code && code.clients ? code.clients : null;
+  // Ohne Wahl: die erste verbundene App – sonst wählt man selbst
+  const cur = client ? CL.clientOf(client) : CL.CLIENTS.find((c) => clientState(c) === 'connected') || null;
+  const badge = (c) => { const s = clientState(c); return s === 'connected' ? html`<span class="cl-dot ok" title="${t('connected')}"></span>` : s === 'installed' ? html`<span class="cl-dot" title="${t('installed')}"></span>` : ''; };
   Hostwerk.render('#connect', html`<div class="grid grid-2 cl-fade">
-    <div class="card"><div class="card-head">${I('monitor')}<h3>Claude Desktop</h3><span class="badge">${t('forClaude')}</span><span class="badge ${d.connected ? 'ok' : ''}">${d.connected ? t('connected') : d.installed ? t('installed') : t('notFound')}</span></div>
-      <div class="card-body stack" style="gap:var(--sp-3)">${LINK(d.connected, 'monitor')}
-        <div class="small muted">${t('desktopText')}</div>
-        <div class="row-tight" style="flex-wrap:wrap">${d.connected ? html`<button class="btn" id="deskOff">${t('disconnect')}</button>` : html`<button class="btn primary" id="deskOn" ${d.supported ? '' : raw('disabled')}>${I('link', 14)}${t('connectDesktop')}</button>`}
-          ${!d.installed && d.supported ? html`<button class="btn ghost" data-url="${d.download}">${I('download', 14)}${t('getDesktop')}</button>` : ''}</div>
-        ${d.wanted && !d.connected ? html`<div class="info-line warn"><span>${t('desktopOverwritten')}</span></div>` : ''}
-      </div></div>
-    <div class="card"><div class="card-head">${I('terminal')}<h3>Claude Code</h3><span class="badge">${t('forClaude')}</span><span class="badge ${st.codeConnected ? 'ok' : ''}">${st.codeConnected ? t('connected') : st.installed ? t('installed') : t('notFound')}</span></div>
-      <div class="card-body stack" style="gap:var(--sp-3)">${LINK(st.codeConnected, 'terminal')}
-        <div class="small muted">${t('codeText')}</div>
-        <div class="row-tight">${st.installed ? html`<button class="btn ${st.codeConnected ? '' : 'primary'}" id="codeConnect">${I('link', 14)}${st.codeConnected ? t('reconnect') : t('connectCode')}</button>` : html`<span class="small muted">${t('installCodeFirst')}</span>`}</div>
-      </div></div>
-    ${clients && agents.length ? html`<div class="card"><div class="card-head">${I('terminal')}<h3>${t('cliTitle')}</h3></div>
+    <div class="card cl-wide"><div class="card-head">${I('plug')}<h3>${t('clientsTitle')}</h3></div>
       <div class="card-body stack" style="gap:var(--sp-3)">
-        <div class="small muted">${t('cliText')}</div>
-        ${agents.map((a) => html`<div class="row-tight" style="flex-wrap:wrap"><span class="grow small"><b>${a.label}</b></span><span class="badge ${a.connected ? 'ok' : ''}">${a.connected ? t('connected') : a.installed ? t('installed') : t('notFound')}</span>${a.installed ? html`<button class="btn xs ${a.connected ? '' : 'primary'}" data-cli="${a.id}">${I('link', 13)}${a.connected ? t('reconnect') : t('connectShort')}</button>` : html`<button class="btn xs ghost" data-url="${a.docs}">${I('book', 13)}${t('guide')}</button>`}</div>`)}
+        <div class="small muted">${t('clientsText')}</div>
+        <div class="cl-chips" role="group" aria-label="${t('clientsTitle')}">${CL.CLIENTS.map((c) => html`<button type="button" class="cl-chip ${cur && cur.id === c.id ? 'on' : ''}" aria-pressed="${cur && cur.id === c.id ? 'true' : 'false'}" data-client="${c.id}">${I(c.icon, 14)}${clientName(c)}${badge(c)}</button>`)}</div>
+        ${cur ? html`<div class="cl-client"><h4 class="cl-client-title">${clientName(cur)}</h4>${clientDetail(cur, clients)}</div>` : html`<div class="small muted">${t('pickClient')}</div>`}
       </div></div>
-    <div class="card"><div class="card-head">${I('plug')}<h3>${t('mcpAppsTitle')}</h3></div>
-      <div class="card-body stack" style="gap:var(--sp-3)">
-        <div class="small muted">${t('mcpAppsText')}</div>
-        <div class="row-tight"><button class="btn" id="copyMcp">${I('copy', 14)}${t('copyMcp')}</button></div>
-      </div></div>` : ''}
     <div class="card"><div class="card-head">${I('file')}<h3>${t('otherTools')}</h3></div>
       <div class="card-body stack" style="gap:var(--sp-3)">
         <div class="small muted">${t('otherToolsText')}</div>
@@ -178,9 +202,13 @@ async function renderConnect() {
   const desk = async (on) => { try { const r = await Hostwerk.post('/claude/connect/desktop', { on }); Hostwerk.toast(on ? (r && r.restarted ? t('deskRestarted') : t('deskNextStart')) : t('deskRemoved'), { kind: 'success' }); st = await Hostwerk.get('/claude/status'); renderConnect(); } catch (e) { fail(e); } };
   if ($('deskOn')) $('deskOn').onclick = () => desk(true);
   if ($('deskOff')) $('deskOff').onclick = () => desk(false);
-  if ($('codeConnect')) $('codeConnect').onclick = async () => { try { const r = await Hostwerk.get('/claude/connect/code'); await Hostwerk.terminal(r.command, { title: t('connectCodeTitle') }); Hostwerk.toast(t('typedInTerminal'), { kind: 'success' }); } catch (e) { fail(e); } };
-  for (const b of document.querySelectorAll('[data-cli]')) b.onclick = async () => { const a = agents.find((x) => x.id === b.dataset.cli); try { await Hostwerk.terminal(clients.commands[a.id], { title: t('connectAgentTitle', { name: a.label }) }); Hostwerk.toast(t('typedInTerminal'), { kind: 'success' }); } catch (e) { fail(e); } };
-  if ($('copyMcp')) $('copyMcp').onclick = () => Hostwerk.copy(clients.json).then(() => Hostwerk.toast(t('mcpCopied'), { kind: 'success' })).catch(fail);
+  for (const b of document.querySelectorAll('[data-client]')) b.onclick = () => { client = b.dataset.client; Hostwerk.storage.set('client', client).catch(() => {}); renderConnect(); };
+  for (const b of document.querySelectorAll('[data-cli]')) b.onclick = async () => {
+    const c = CL.clientOf(b.dataset.cli);
+    try { const cmd = c.agent === 'claude' ? code.command : clients.commands[c.agent]; await Hostwerk.terminal(cmd, { title: t('connectAgentTitle', { name: clientName(c) }) }); Hostwerk.toast(t('typedInTerminal'), { kind: 'success' }); } catch (e) { fail(e); }
+  };
+  if ($('copyConf')) $('copyConf').onclick = () => Hostwerk.copy(CL.clientConfig(cur.id, clients.json)).then(() => Hostwerk.toast(t('mcpCopied'), { kind: 'success' })).catch(fail);
+  if ($('copyPath')) $('copyPath').onclick = () => Hostwerk.copy(cur.file).then(() => Hostwerk.toast(t('pathCopied'), { kind: 'success' })).catch(fail);
   const cp = $('conProject'); if (cp) cp.onchange = () => { setProject(cp.value); renderConnect(); };
   for (const b of document.querySelectorAll('[data-target]')) b.onclick = async () => {
     try { const c = await Hostwerk.get(`/mind/context?clusters=ich,allgemein&project=${enc(pid)}`); const r = await Hostwerk.post(`/claude/write/${enc(pid)}`, { target: b.dataset.target, markdown: c.md }); Hostwerk.toast(t(r.created ? 'created' : 'updated', { file: r.file }), { kind: 'success' }); renderConnect(); } catch (e) { fail(e); }

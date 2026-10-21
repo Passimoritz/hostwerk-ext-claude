@@ -2,7 +2,9 @@
 
 # KI-Anbindung
 
-Jede KI mit Hostwerk verbinden – Claude, ChatGPT/Codex, Gemini, lokale Modelle: was jede KI über dich und deine Projekte weiß (Gedächtnis), deine KI-Werkzeuge daran angebunden, direkt im Projekt loslegen, Tokens sparen, Tipps & Tricks.
+Jede KI mit Hostwerk verbinden – Cursor, VS Code, Windsurf, LM Studio, Claude, Codex, Gemini und jede andere MCP-App: was jede KI über dich und deine Projekte weiß (Gedächtnis), deine KI-Apps daran angebunden, direkt im Projekt loslegen, Tokens sparen, Tipps & Tricks.
+
+Du findest sie im **KI-Helfer** als Reiter **KI-Anbindung** (`#/ki/anbindung`) – ihre Reiter stehen dort links als Liste, wie bei den Einstellungen.
 
 [English](README.md) · Offizielle [Hostwerk](https://github.com/Passimoritz/hostwerk-public)-Erweiterung. Kennung: `claude` (so hieß sie anfangs – bleibt, damit Updates weiter funktionieren). Der Motor bleibt in Hostwerk, diese Erweiterung ist seine Oberfläche – plus ein kleiner Server-Teil für die Token-Grenze.
 
@@ -12,13 +14,14 @@ Was nur mit Claude funktioniert, steht auf der Seite und hier als **für Claude*
 
 - **Gedächtnis:** was jede KI (Claude, OpenAI, Gemini, lokal …) aus deinem Gedankennetz bekommt – Themen, Projekt, Graph, Umfang – mit Vorschau je Anbieter.
 - **Loslegen:** Projekt und KI-Werkzeug wählen (Claude Code, Codex CLI oder Gemini CLI), Auftrag beschreiben (oder Vorlage wie *Fehler beheben*, *Tests schreiben* – oder eigene Vorlagen). Hostwerk öffnet das Werkzeug im Projektordner und tippt den Befehl ins Hostwerk-Terminal, du startest ihn mit Enter. Die Werkzeuge lassen sich von hier aus installieren; claude.ai, ChatGPT und Gemini öffnen sich im Browser.
-- **Verbinden:**
-  - Claude Desktop und Claude Code (**für Claude**) über MCP mit dem Gedankennetz;
-  - Codex CLI und Gemini CLI über ihren offiziellen Befehl `mcp add`;
-  - jede andere MCP-fähige App (Cursor, VS Code, Windsurf, LM Studio …): MCP-Einstellungen kopieren und dort einfügen;
+- **Verbinden:** deine KI-App wählen und genau ihren Weg bekommen:
+  - Claude Desktop: ein Klick (Hostwerk trägt sich selbst ein);
+  - Claude Code, Codex CLI und Gemini CLI: ihr offizieller Befehl `mcp add` im Terminal;
+  - Cursor, VS Code (Copilot), Windsurf, LM Studio, Continue: Einstellungen in der Schreibweise der App kopieren, dazu der Dateipfad;
+  - jede andere MCP-App: dieselben Einstellungen im verbreiteten `mcpServers`-Format;
   - Kontext in die Anweisungsdatei jeder KI schreiben (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, Copilot, Cursor);
   - Wissensgraph öffnen oder den Kontext für claude.ai, ChatGPT oder Gemini im Browser kopieren.
-- **Token sparen (Claude Code):**
+- **Token sparen** (Messung und Spar-Werkzeuge **für Claude Code**):
   - Verbrauch je Tag als Diagramm, mit Trend und Tagesgrenze;
   - Spar-Werkzeuge aus dem Online-Katalog, per Klick installiert und aktuell gehalten, mit Vor- und Nachteilen und Vergleich;
   - neu entdeckte Projekte auf GitHub.

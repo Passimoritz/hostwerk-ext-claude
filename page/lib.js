@@ -24,6 +24,42 @@
   ];
   const agentOf = (id) => AGENTS.find((a) => a.id === id) || AGENTS[0];
 
+  /*
+   * KI-Apps, die sich mit dem Gedankennetz verbinden lassen (MCP) – als Daten, damit neue Apps nur hier dazukommen.
+   *   how: desktop = Hostwerk trägt sich selbst ein (Claude Desktop), cli = offizieller „mcp add“-Befehl ins Terminal
+   *        (agent = Eintrag in Hostwerks /claude/status.agents bzw. Claude Code), file = Einstellungen kopieren und in die
+   *        Datei der App einfügen (format: mcpServers = Schreibweise von Claude/Cursor, servers = VS Code)
+   *   file: wo die App ihre MCP-Einstellungen liest (~ = Benutzerordner; ohne ~ im Projektordner), docs: Anleitung der App
+   * Unbekannte Apps nehmen „other“: dieselben Einstellungen in der verbreiteten mcpServers-Schreibweise.
+   */
+  const CLIENTS = [
+    { id: 'claude-desktop', label: 'Claude Desktop', how: 'desktop', icon: 'monitor', docs: 'https://modelcontextprotocol.io/quickstart/user' },
+    { id: 'claude-code', label: 'Claude Code', how: 'cli', agent: 'claude', icon: 'terminal', docs: 'https://docs.anthropic.com/en/docs/claude-code/mcp' },
+    { id: 'codex', label: 'Codex CLI', how: 'cli', agent: 'codex', icon: 'terminal', docs: 'https://github.com/openai/codex' },
+    { id: 'gemini', label: 'Gemini CLI', how: 'cli', agent: 'gemini', icon: 'terminal', docs: 'https://github.com/google-gemini/gemini-cli' },
+    { id: 'cursor', label: 'Cursor', how: 'file', format: 'mcpServers', file: '~/.cursor/mcp.json', icon: 'file', docs: 'https://docs.cursor.com/context/model-context-protocol' },
+    { id: 'vscode', label: 'VS Code (Copilot)', how: 'file', format: 'servers', file: '.vscode/mcp.json', icon: 'file', docs: 'https://code.visualstudio.com/docs/copilot/chat/mcp-servers' },
+    { id: 'windsurf', label: 'Windsurf', how: 'file', format: 'mcpServers', file: '~/.codeium/windsurf/mcp_config.json', icon: 'file', docs: 'https://docs.windsurf.com/windsurf/cascade/mcp' },
+    { id: 'lmstudio', label: 'LM Studio', how: 'file', format: 'mcpServers', file: '~/.lmstudio/mcp.json', icon: 'file', docs: 'https://lmstudio.ai/docs/app/plugins/mcp' },
+    { id: 'continue', label: 'Continue', how: 'file', format: 'mcpServers', file: '.continue/mcpServers/hostwerk.json', icon: 'file', docs: 'https://docs.continue.dev/customize/deep-dives/mcp' },
+    { id: 'other', label: '', how: 'file', format: 'mcpServers', file: '', icon: 'plug', docs: 'https://modelcontextprotocol.io/clients' },
+  ];
+  const clientOf = (id) => CLIENTS.find((c) => c.id === id) || CLIENTS[CLIENTS.length - 1];
+
+  /**
+   * MCP-Einstellungen für eine App aus Hostwerks Start-Befehl (launch = { command, args, env } bzw. der JSON-Text von
+   * /claude/connect/code → clients.json). Liefert den Text zum Einfügen – in der Schreibweise der App.
+   */
+  function clientConfig(id, launch) {
+    let l = launch;
+    if (typeof l === 'string') { try { l = JSON.parse(l); } catch { l = null; } }
+    if (l && l.mcpServers) l = l.mcpServers.hostwerk;
+    if (!l || !l.command) return '';
+    const c = clientOf(id);
+    const entry = { command: l.command, args: l.args || [], ...(l.env && Object.keys(l.env).length ? { env: l.env } : {}) };
+    return JSON.stringify(c.format === 'servers' ? { servers: { hostwerk: { type: 'stdio', ...entry } } } : { mcpServers: { hostwerk: entry } }, null, 2);
+  }
+
   /** Befehl für „Loslegen“: nur „claude“ bzw. „codex“/„gemini“ oder mit Auftrag (+ Hinweis auf das Gedankennetz, wenn verbunden). */
   function startCommand(goal, { connected = false, lang = 'de', agent = 'claude' } = {}) {
     const a = agentOf(agent);
@@ -158,5 +194,5 @@
     return { today, pct, level: !limit || today == null ? 'none' : pct >= 100 ? 'over' : pct >= 80 ? 'warn' : 'ok' };
   }
 
-  return { AGENTS, agentOf, shellQuote, startCommand, usageSummary, TASKS, TIPS, CATS, filterTips, ICON, icon, cleanTemplates, exportTemplates, importTemplates, budgetState };
+  return { AGENTS, agentOf, CLIENTS, clientOf, clientConfig, shellQuote, startCommand, usageSummary, TASKS, TIPS, CATS, filterTips, ICON, icon, cleanTemplates, exportTemplates, importTemplates, budgetState };
 }));

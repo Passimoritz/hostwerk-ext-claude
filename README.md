@@ -2,7 +2,9 @@
 
 # AI Connect
 
-Connect any AI with Hostwerk – Claude, ChatGPT/Codex, Gemini, local models: what every AI knows about you and your projects (memory), your AI tools connected to it, get going right in your project, save tokens, tips & tricks.
+Connect any AI with Hostwerk – Cursor, VS Code, Windsurf, LM Studio, Claude, Codex, Gemini and any other MCP app: what every AI knows about you and your projects (memory), your AI apps connected to it, get going right in your project, save tokens, tips & tricks.
+
+You find it in the **AI assistant** as the **AI Connect** tab (`#/ki/anbindung`) – its tabs are a list on the left there, like in the settings.
 
 [Deutsch](README.de.md) · An official [Hostwerk](https://github.com/Passimoritz/hostwerk-public) extension. Extension id: `claude` (the name it had at first – kept so updates keep working). The engine stays inside Hostwerk; this extension is its interface plus a small server part for the token limit.
 
@@ -12,13 +14,14 @@ Parts that only work with Claude are marked **for Claude** on the page and below
 
 - **Memory:** what every AI (Claude, OpenAI, Gemini, local …) gets from your thought network – topics, project, graph, size – with a preview per provider.
 - **Get going:** pick a project and an AI tool (Claude Code, Codex CLI or Gemini CLI), describe the task (or use a template such as *Fix a bug* or *Write tests*, or your own templates). Hostwerk opens the tool in the project folder and types the command into the Hostwerk terminal. You start it with Enter. Install the tools from the same page, or open claude.ai, ChatGPT or Gemini in the browser.
-- **Connect:**
-  - Claude Desktop and Claude Code (**for Claude**) to your thought network via MCP;
-  - Codex CLI and Gemini CLI via their official `mcp add` command;
-  - any other MCP-capable app (Cursor, VS Code, Windsurf, LM Studio …): copy the MCP settings and paste them there;
+- **Connect:** pick your AI app and get exactly its way:
+  - Claude Desktop: one click (Hostwerk adds itself);
+  - Claude Code, Codex CLI and Gemini CLI: their official `mcp add` command in the terminal;
+  - Cursor, VS Code (Copilot), Windsurf, LM Studio, Continue: copy the settings in the app’s notation, plus the file path;
+  - any other MCP app: the same settings in the common `mcpServers` format;
   - write the context into the instruction file each AI reads (`CLAUDE.md`, `AGENTS.md`, `GEMINI.md`, Copilot, Cursor);
   - open the knowledge graph, or copy the context for claude.ai, ChatGPT or Gemini in the browser.
-- **Save tokens (Claude Code):**
+- **Save tokens** (measuring and saving tools **for Claude Code**):
   - usage per day as a chart, with the trend, and a daily limit;
   - token-saving tools from the online catalog, installed in one click and kept up to date, with pros and cons and a comparison;
   - new projects discovered on GitHub.

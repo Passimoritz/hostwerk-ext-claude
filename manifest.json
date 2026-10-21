@@ -8,8 +8,8 @@
     "en": "AI Connect"
   },
   "description": {
-    "de": "Jede KI mit Hostwerk verbinden – Claude, ChatGPT/Codex, Gemini, lokale Modelle: Gedächtnis je KI einstellen, Claude Desktop, Claude Code, Codex, Gemini CLI und andere MCP-Apps anbinden, im Projekt loslegen, Tokens sparen, Tipps & Tricks.",
-    "en": "Connect any AI with Hostwerk – Claude, ChatGPT/Codex, Gemini, local models: set the memory each AI gets, connect Claude Desktop, Claude Code, Codex, Gemini CLI and other MCP apps, get going in your project, save tokens, tips & tricks."
+    "de": "Jede KI mit Hostwerk verbinden – Cursor, VS Code, Windsurf, LM Studio, Claude, Codex, Gemini CLI und jede andere MCP-App: Gedächtnis je KI einstellen, App mit einem Klick bzw. passendem Weg anbinden, im Projekt loslegen, Tokens sparen, Tipps & Tricks. Steckt im KI-Helfer als Reiter „KI-Anbindung“.",
+    "en": "Connect any AI with Hostwerk – Cursor, VS Code, Windsurf, LM Studio, Claude, Codex, Gemini CLI and any other MCP app: set the memory each AI gets, connect your app in one click or the right way for it, get going in your project, save tokens, tips & tricks. Lives in the AI assistant as the “AI Connect” tab."
   },
   "permissions": [
     "read:claude",
@@ -60,8 +60,8 @@
       {
         "id": "tokens",
         "title": {
-          "de": "Token sparen (Claude Code)",
-          "en": "Save tokens (Claude Code)"
+          "de": "Token sparen",
+          "en": "Save tokens"
         },
         "icon": "gauge"
       },
@@ -82,11 +82,9 @@
         "icon": "list"
       }
     ],
-    "nav": {
-      "group": "system"
-    }
+    "nav": false
   },
-  "version": "1.4.0",
+  "version": "1.5.0",
   "author": "Hostwerk",
   "homepage": "https://github.com/Passimoritz/hostwerk-ext-claude",
   "license": "MIT",
@@ -119,6 +117,17 @@
   ],
   "contributes": {
     "tabs": [
+      {
+        "id": "anbindung",
+        "on": "area:ai",
+        "page": true,
+        "title": {
+          "de": "KI-Anbindung",
+          "en": "AI Connect"
+        },
+        "icon": "network",
+        "file": "page/index.html"
+      },
       {
         "id": "go",
         "on": "area:projects",
