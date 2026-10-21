@@ -21,12 +21,18 @@ let usage = null;      // /claude/tools/usage
 let measuring = false;
 let tipCat = '';
 let tipQ = '';
+let templates = [];    // eigene Auftrags-Vorlagen (Hostwerk.storage – für alle, die dieses Hostwerk nutzen)
+let settings = {};     // manifest.settings (Token-Tagesgrenze)
+let loadError = null;  // Grunddaten nicht geladen → Fehlerzustand mit „Erneut versuchen“
+const locale = () => Hostwerk.lang || 'de';
 
 const connected = () => !!(st && ((st.desktop && st.desktop.connected) || st.codeConnected));
 const project = () => (projects || []).find((p) => p.id === pid) || null;
 
 async function loadBase() {
   [st, projects] = await Promise.all([Hostwerk.get('/claude/status'), Hostwerk.get('/projects').catch(() => [])]);
+  try { templates = (await Hostwerk.storage.get('templates')) || []; } catch { templates = []; }
+  try { settings = (await Hostwerk.settings.get()) || {}; } catch { settings = {}; }
   if (!pid) { try { pid = await Hostwerk.storage.get('project'); } catch { pid = null; } }
   if (!pid || !projects.some((p) => p.id === pid)) pid = projects[0] ? projects[0].id : null;
 }
@@ -60,7 +66,10 @@ function renderGo() {
         <div class="cl-form">
           <div class="row-tight" style="flex-wrap:wrap"><label class="label" for="goProject">${t('project')}</label>${projectPicker('goProject')}</div>
           <textarea class="input" id="goal" placeholder="${t('goalPlaceholder')}" aria-label="${t('goalLabel')}">${goal}</textarea>
-          <div class="cl-chips">${CL.TASKS.map((x) => html`<button type="button" class="cl-chip" data-task="${x.id}">${I(x.icon, 14)}${x[lang()][0]}</button>`)}</div>
+          <div class="cl-chips">${CL.TASKS.map((x) => html`<button type="button" class="cl-chip" data-task="${x.id}">${I(x.icon, 14)}${x[lang()][0]}</button>`)}
+            ${templates.map((x) => html`<span class="cl-chip cl-own"><button type="button" class="cl-chip-btn" data-own="${x.id}" title="${x.text}">${I('star', 14)}${x.title}</button><button type="button" class="cl-chip-x" data-own-del="${x.id}" aria-label="${t('tplRemove', { name: x.title })}" title="${t('tplRemove', { name: x.title })}">×</button></span>`)}</div>
+          <div class="row-tight cl-tpl"><button type="button" class="btn xs ghost" id="tplSave" ${goal.trim() ? '' : raw('disabled')}>${I('star', 13)}${t('tplSave')}</button><button type="button" class="btn xs ghost" id="tplShare" ${templates.length ? '' : raw('disabled')}>${I('copy', 13)}${t('tplShare')}</button><button type="button" class="btn xs ghost" id="tplImport">${I('download', 13)}${t('tplImport')}</button></div>
+          <div id="tplForm"></div>
           <div class="cl-cmd" title="${t('cmdPreview')}">${p ? `${p.path}> ` : ''}${cmd}</div>
           <div class="row-tight" style="flex-wrap:wrap">
             <button class="btn primary" id="goStart" ${!p || !goal.trim() ? raw('disabled') : ''}>${I('play', 14)}${t('startWithGoal')}</button>
@@ -87,6 +96,7 @@ function renderGo() {
   const ta = $('goal');
   ta.oninput = () => { goal = ta.value; const b = $('goStart'); if (b) b.disabled = !project() || !goal.trim(); document.querySelector('.cl-cmd').textContent = `${project() ? project().path + '> ' : ''}${CL.startCommand(goal, { connected: connected(), lang: lang() })}`; };
   for (const b of document.querySelectorAll('[data-task]')) b.onclick = () => { const x = CL.TASKS.find((y) => y.id === b.dataset.task); if (!goal.trim()) { goal = x[lang()][1]; renderGo(); const a = $('goal'); a.focus(); a.setSelectionRange(goal.length, goal.length); } };
+  wireTemplates();
   const run = (withGoal) => {
     const pr = project(); if (!pr) return;
     if (!st.installed) { Hostwerk.toast(t('codeMissing'), { kind: 'error' }); return; }
@@ -111,25 +121,25 @@ async function renderConnect() {
   let kg = null; try { kg = await Hostwerk.get('/knowledge'); } catch { kg = null; }
   Hostwerk.render('#connect', html`<div class="grid grid-2 cl-fade">
     <div class="card"><div class="card-head">${I('monitor')}<h3>Claude Desktop</h3><span class="badge ${d.connected ? 'ok' : ''}">${d.connected ? t('connected') : d.installed ? t('installed') : t('notFound')}</span></div>
-      <div class="card-body stack" style="gap:10px">${LINK(d.connected, 'monitor')}
+      <div class="card-body stack" style="gap:var(--sp-3)">${LINK(d.connected, 'monitor')}
         <div class="small muted">${t('desktopText')}</div>
         <div class="row-tight" style="flex-wrap:wrap">${d.connected ? html`<button class="btn" id="deskOff">${t('disconnect')}</button>` : html`<button class="btn primary" id="deskOn" ${d.supported ? '' : raw('disabled')}>${I('link', 14)}${t('connectDesktop')}</button>`}
           ${!d.installed && d.supported ? html`<button class="btn ghost" data-url="${d.download}">${I('download', 14)}${t('getDesktop')}</button>` : ''}</div>
         ${d.wanted && !d.connected ? html`<div class="info-line warn"><span>${t('desktopOverwritten')}</span></div>` : ''}
       </div></div>
     <div class="card"><div class="card-head">${I('terminal')}<h3>Claude Code</h3><span class="badge ${st.codeConnected ? 'ok' : ''}">${st.codeConnected ? t('connected') : st.installed ? t('installed') : t('notFound')}</span></div>
-      <div class="card-body stack" style="gap:10px">${LINK(st.codeConnected, 'terminal')}
+      <div class="card-body stack" style="gap:var(--sp-3)">${LINK(st.codeConnected, 'terminal')}
         <div class="small muted">${t('codeText')}</div>
         <div class="row-tight">${st.installed ? html`<button class="btn ${st.codeConnected ? '' : 'primary'}" id="codeConnect">${I('link', 14)}${st.codeConnected ? t('reconnect') : t('connectCode')}</button>` : html`<span class="small muted">${t('installCodeFirst')}</span>`}</div>
       </div></div>
     <div class="card"><div class="card-head">${I('file')}<h3>${t('otherTools')}</h3></div>
-      <div class="card-body stack" style="gap:10px">
+      <div class="card-body stack" style="gap:var(--sp-3)">
         <div class="small muted">${t('otherToolsText')}</div>
         ${projectPicker('conProject')}
         ${targets.map((x) => html`<div class="row-tight"><span class="grow small"><b>${x.label}</b> <span class="tiny muted">${x.file}</span></span>${x.has ? html`<span class="badge ok">${t('included')}</span>` : ''}<button class="btn xs" data-target="${x.id}">${x.has ? t('update') : t('include')}</button></div>`)}
       </div></div>
     <div class="card"><div class="card-head">${I('graph')}<h3>${t('kgTitle')}</h3>${kg ? html`<span class="badge">${t('kgBuilt', { n: kg.sources.filter((s) => s.built).length })}</span>` : ''}</div>
-      <div class="card-body stack" style="gap:10px">
+      <div class="card-body stack" style="gap:var(--sp-3)">
         <div class="small muted">${t('kgText')}</div>
         <div class="row-tight" style="flex-wrap:wrap"><button class="btn primary" id="openKg">${I('graph', 14)}${t('openKg')}</button><button class="btn ghost" id="copyCtx">${I('copy', 14)}${t('copyContext')}</button><button class="btn ghost" data-url="${st.web}">${I('external', 14)}${t('openWeb')}</button></div>
         <div class="tiny muted">${t('kgHint')}</div>
@@ -165,20 +175,31 @@ function saveMeter(text) {
   return html`<div class="cl-save"><span class="tiny muted">${t('savings')}</span><div class="cl-meter"><i style="width:${v}%"></i></div><b class="small">${text}</b></div>`;
 }
 const KIND = (k) => t(`kind_${k}`);
+/** Tagesgrenze aus den Einstellungen: heutiger Verbrauch als Balken, Benachrichtigung kommt von Hostwerk (Server-Teil). */
+function budget(days) {
+  const limit = Number(settings.dailyTokens) || 0;
+  if (!limit) return html`<div class="small muted">${t('budgetOff')} <button type="button" class="btn xs ghost" id="budgetSet">${t('budgetSet')}</button></div>`;
+  const b = CL.budgetState(days, limit);
+  return html`<div class="callout ${b.level === 'over' ? 'err' : b.level === 'warn' ? 'warn' : ''}"><div class="callout-body"><b class="callout-title">${t('budgetTitle', { limit: n(limit) })}</b>
+    <div class="small">${b.today == null ? t('budgetUnknown') : t('budgetToday', { used: n(b.today), pct: b.pct })}</div>
+    ${b.today == null ? '' : html`<div class="cl-meter cl-budget"><i style="width:${Math.min(100, b.pct)}%"></i></div>`}
+    <div class="tiny muted">${t('budgetHint')} <button type="button" class="btn xs ghost" id="budgetSet">${t('budgetChange')}</button></div></div></div>`;
+}
 async function renderTokens() {
   if (!tools) { Hostwerk.render('#tokens', html`<div class="hw-skeleton" style="height:240px"></div>`); try { tools = await Hostwerk.get('/claude/tools'); } catch (e) { fail(e); return; } }
   const d = tools; const list = d.tools.filter((x) => !x.builtin);
   const days = (usage && usage.days) || []; const s = CL.usageSummary(days);
   Hostwerk.render('#tokens', html`<div class="cl-stack cl-fade">
     ${!d.claude ? html`<div class="callout warn"><b>${t('codeNotFound')}</b> ${t('codeNotFoundText')}</div>` : ''}
+    ${budget(days)}
     <div class="grid grid-2">
       <div class="card"><div class="card-head">${I('gauge')}<h3>${t('usageTitle')}</h3><span class="small muted">${t('usageSub')}</span><div class="right"><button class="btn sm" id="measure" ${measuring ? raw('disabled') : ''}>${I('refresh', 14)}${measuring ? t('measuring') : usage ? t('measureAgain') : t('measure')}</button></div></div>
-        <div class="card-body stack" style="gap:10px">${!usage ? html`<div class="small muted">${t('usageIntro')}</div>`
+        <div class="card-body stack" style="gap:var(--sp-3)">${!usage ? html`<div class="small muted">${t('usageIntro')}</div>`
           : usage.error ? html`<div class="small muted">${usage.error}</div>`
           : !days.length ? html`<div class="small muted">${t('noSessions')}</div>`
           : html`${chart(days)}<div class="cl-kpis"><div class="cl-kpi"><b>${n(s.total)}</b><span>${t('kpiTotal')}</span></div><div class="cl-kpi"><b>${n(s.avg)}</b><span>${t('kpiAvg')}</span></div><div class="cl-kpi"><b>${n(s.cacheRead)}</b><span>${t('kpiCache')}</span></div>${s.trend != null ? html`<div class="cl-kpi"><b class="${s.trend <= 0 ? 'down' : 'up'}">${s.trend > 0 ? '+' : ''}${s.trend} %</b><span>${t('kpiTrend')}</span></div>` : ''}</div>`}</div></div>
       <div class="card"><div class="card-head">${I('refresh')}<h3>${t('careTitle')}</h3></div>
-        <div class="card-body stack" style="gap:12px">
+        <div class="card-body stack" style="gap:var(--sp-3)">
           <label class="row-tight"><input type="checkbox" id="autoUpd" ${d.autoUpdate ? raw('checked') : ''}><span class="grow"><b class="small">${t('autoUpdate')}</b><div class="tiny muted">${t('autoUpdateText')}</div></span></label>
           <div class="small"><b>${d.mcp.length}</b> ${t('mcpCount')}${d.mcp.length ? `: ${d.mcp.join(', ')}` : ''} <span class="muted">${t('mcpCost')}</span></div>
           <button class="btn ghost sm" id="toTips">${I('bulb', 14)}${t('moreTips')}</button>
@@ -205,6 +226,7 @@ async function renderTokens() {
     <div class="card" id="discover"><div class="card-head">${I('compass')}<h3>${t('discoverTitle')}</h3><span class="small muted">${t('discoverSub')}</span></div><div class="card-body"><div class="hw-skeleton" style="height:60px"></div></div></div>
   </div>`);
   $('measure').onclick = measure;
+  if ($('budgetSet')) $('budgetSet').onclick = () => Hostwerk.settings.open();
   $('toTips').onclick = () => Hostwerk.setTab('tips');
   $('autoUpd').onchange = async (e) => { try { await Hostwerk.put('/claude/tools', { autoUpdate: e.target.checked }); tools = null; renderTokens(); } catch (er) { e.target.checked = !e.target.checked; fail(er); } };
   for (const b of document.querySelectorAll('[data-act]')) b.onclick = () => toolAction(b.dataset.id, b.dataset.act, b);
@@ -236,7 +258,7 @@ async function loadDiscover() {
   try { list = await Hostwerk.get('/claude/tools/discover'); } catch (e) { list = { error: e.message }; }
   const box = document.querySelector('#discover .card-body'); if (!box) return;
   Hostwerk.render(box, list.error ? html`<div class="small muted">${list.error}</div>` : !list.length ? html`<div class="small muted">${t('discoverNone')}</div>`
-    : html`${list.map((r) => html`<div class="list-item">${I('sparkles', 15)}<div class="grow small" style="min-width:0"><b>${r.repo}</b><div class="tiny muted">${r.description || ''}</div></div><span class="tiny muted">${I('star', 11)} ${n(r.stars)}</span><button class="btn xs ghost" data-url="${r.url}">${I('external', 13)}</button></div>`)}<div class="tiny muted" style="margin-top:8px">${t('discoverHint')}</div>`);
+    : html`${list.map((r) => html`<div class="list-item">${I('sparkles', 15)}<div class="grow small" style="min-width:0"><b>${r.repo}</b><div class="tiny muted">${r.description || ''}</div></div><span class="tiny muted">${I('star', 11)} ${n(r.stars)}</span><button class="btn xs ghost" data-url="${r.url}">${I('external', 13)}</button></div>`)}<div class="tiny muted" style="margin-top:var(--sp-2)">${t('discoverHint')}</div>`);
   wireUrls();
 }
 
@@ -289,7 +311,7 @@ async function renderMemory() {
       <label class="cl-sw big"><input type="checkbox" id="mOn" ${mem.on ? raw('checked') : ''}><span>${mem.on ? t('memOn') : t('memOff')}</span></label></div>
     ${!mem.mindOn ? html`<div class="callout warn"><div class="callout-body small">${t('memMindOff')}</div></div>` : ''}
     <div class="grid grid-2">
-      <div class="card"><div class="card-head">${I('book')}<h3>${t('memWhat')}</h3></div><div class="card-body cl-stack" style="gap:8px">
+      <div class="card"><div class="card-head">${I('book')}<h3>${t('memWhat')}</h3></div><div class="card-body cl-stack" style="gap:var(--sp-2)">
         ${cl.map((c) => sw(`mc-${c.id}`, mem.clusters.includes(c.id), c.title))}
         ${sw('mProj', mem.project, t('memProject'))}
         ${sw('mGraph', mem.graph, t('memGraph'))}
@@ -297,13 +319,13 @@ async function renderMemory() {
         <input type="range" id="mMax" min="200" max="8000" step="100" value="${mem.maxTokens}" aria-valuetext="${n(mem.maxTokens)} Tokens">
         <p class="tiny muted" style="margin:0">${t('memPrivate')}</p>
       </div></div>
-      <div class="card"><div class="card-head">${I('bot')}<h3>${t('memWho')}</h3></div><div class="card-body cl-stack" style="gap:8px">
+      <div class="card"><div class="card-head">${I('bot')}<h3>${t('memWho')}</h3></div><div class="card-body cl-stack" style="gap:var(--sp-2)">
         ${P.map((p) => sw(`mp-${p.id}`, mem.providers[p.id] !== false, p.label))}
         <p class="tiny muted" style="margin:0">${t('memWhoHint')}</p>
       </div></div>
     </div>
     <div class="card"><div class="card-head">${I('eye')}<h3>${t('memPreview')}</h3><div class="right row-tight"><select class="select" id="mPv" aria-label="${t('memPreviewFor')}">${P.map((p) => html`<option value="${p.id}" ${p.id === memProvider ? raw('selected') : ''}>${p.label}</option>`)}</select><button class="btn sm" id="mPvGo">${t('memShow')}</button></div></div>
-      <div class="card-body">${memPreview == null ? html`<p class="small muted" style="margin:0">${t('memPreviewHint')}</p>` : memPreview.text ? html`<div class="tiny muted" style="margin-bottom:6px">≈ ${n(memPreview.tokens)} Tokens</div><pre class="cl-mem-pre">${memPreview.text}</pre>` : html`<p class="small muted" style="margin:0">${t('memNothing')}</p>`}</div></div>
+      <div class="card-body">${memPreview == null ? html`<p class="small muted" style="margin:0">${t('memPreviewHint')}</p>` : memPreview.text ? html`<div class="tiny muted" style="margin-bottom:var(--sp-2)">≈ ${n(memPreview.tokens)} Tokens</div><pre class="cl-mem-pre">${memPreview.text}</pre>` : html`<p class="small muted" style="margin:0">${t('memNothing')}</p>`}</div></div>
   </div>`);
   const save = async (body) => { try { mem = { ...mem, ...(await Hostwerk.put('/ai/memory-share', body)) }; memPreview = null; renderMemory(); } catch (e) { fail(e); renderMemory(); } };
   $('mOn').onchange = (e) => save({ on: e.target.checked });
@@ -320,15 +342,63 @@ async function renderMemory() {
 async function renderLog() {
   let list = [];
   try { list = await Hostwerk.get('/mind/activity'); } catch (e) { fail(e); }
-  const ago = (ts) => { const m = Math.round((Date.now() - ts) / 60000); return m < 1 ? t('justNow') : m < 60 ? t('minAgo', { m }) : m < 1440 ? t('hAgo', { h: Math.round(m / 60) }) : new Date(ts).toLocaleDateString(); };
+  const ago = (ts) => { const m = Math.round((Date.now() - ts) / 60000); return m < 1 ? t('justNow') : m < 60 ? t('minAgo', { m }) : m < 1440 ? t('hAgo', { h: Math.round(m / 60) }) : new Date(ts).toLocaleDateString(locale()); };
   Hostwerk.render('#log', html`<div class="card cl-fade"><div class="card-head">${I('bot')}<h3>${t('logTitle')}</h3><span class="badge ${connected() ? 'ok' : ''}">${connected() ? t('connected') : t('notConnected')}</span></div>
     ${!list.length ? html`<div class="card-body small muted">${connected() ? t('logEmpty') : t('logNotConnected')}</div>` : html`<div class="card-body cl-log">${list.slice(0, 200).map((x, i) => html`<div class="cl-log-row" style="animation-delay:${Math.min(i, 15) * 20}ms">${I(x.action === 'read' ? 'book' : 'sparkles', 14)}<span class="grow"><b>${x.client}</b> ${t(`act_${x.action}`)}: ${x.text}</span><span class="tiny muted">${ago(x.at)}</span></div>`)}</div>`}
   </div>`);
 }
 
 /* ================================================================ Rahmen */
+/* ================================================================ Eigene Vorlagen */
+const saveTemplates = async (list) => { templates = list; try { await Hostwerk.storage.set('templates', list); } catch (e) { fail(e); } renderGo(); };
+function wireTemplates() {
+  for (const b of document.querySelectorAll('[data-own]')) b.onclick = () => { const x = templates.find((y) => y.id === b.dataset.own); if (x) { goal = x.text; renderGo(); const a = $('goal'); a.focus(); a.setSelectionRange(goal.length, goal.length); } };
+  for (const b of document.querySelectorAll('[data-own-del]')) b.onclick = () => saveTemplates(templates.filter((y) => y.id !== b.dataset.ownDel));
+  const form = (body) => Hostwerk.render('#tplForm', body);
+  const save = $('tplSave');
+  if (save) save.onclick = () => {
+    form(html`<div class="row-tight cl-tpl-form"><input class="input grow" id="tplName" maxlength="40" placeholder="${t('tplName')}" aria-label="${t('tplName')}"><button class="btn sm primary" id="tplOk">${t('tplSaveShort')}</button></div>`);
+    const name = $('tplName'); name.focus();
+    const ok = () => { const title = name.value.trim(); if (!title) return; saveTemplates([...templates.filter((y) => y.title !== title), ...CL.cleanTemplates([{ title, text: goal }])].slice(-30)); Hostwerk.toast(t('tplSaved'), { kind: 'success' }); };
+    $('tplOk').onclick = ok; name.onkeydown = (e) => { if (e.key === 'Enter') ok(); };
+  };
+  const share = $('tplShare');
+  if (share) share.onclick = () => Hostwerk.copy(CL.exportTemplates(templates)).then(() => Hostwerk.toast(t('tplCopied'), { kind: 'success' })).catch(fail);
+  const imp = $('tplImport');
+  if (imp) imp.onclick = () => {
+    form(html`<div class="stack cl-tpl-form"><textarea class="input mono" id="tplText" rows="3" placeholder="${t('tplPaste')}" aria-label="${t('tplPaste')}"></textarea><div class="row-tight"><button class="btn sm primary" id="tplImpOk">${t('tplImportShort')}</button></div></div>`);
+    $('tplImpOk').onclick = () => {
+      const got = CL.importTemplates($('tplText').value);
+      if (!got.length) { Hostwerk.toast(t('tplNothing'), { kind: 'error' }); return; }
+      const titles = new Set(got.map((x) => x.title));
+      saveTemplates([...templates.filter((y) => !titles.has(y.title)), ...got].slice(-30));
+      Hostwerk.toast(t('tplImported', { n: got.length }), { kind: 'success' });
+    };
+  };
+}
+
+/* ================================================================ Aktionen (Kürzel, Schnellsuche, „Neu“, Wissensgraph) */
+function runAction(a) {
+  if (!a || !a.id) return;
+  if (a.id === 'graph-claude') goal = lang() === 'en' ? 'Use the knowledge graph of this project (gedankennetz_lesen) to answer first: ' : 'Nutze zuerst den Wissensgraphen dieses Projekts (gedankennetz_lesen), um zu beantworten: ';
+  if (['start-claude', 'graph-claude', 'claude-go'].includes(a.id)) {
+    if (Hostwerk.embed === 'page' && tab !== 'go') Hostwerk.setTab('go').catch(() => {});
+    show('go');
+    setTimeout(() => { const el = $('goal'); if (el) { el.focus(); el.setSelectionRange(goal.length, goal.length); } }, 50);
+  }
+}
+
+function showError() {
+  const box = document.querySelector(`[data-tab="${tab}"] > div`);
+  if (box) Hostwerk.render(box, html`<div class="card"><div class="empty"><h3>${t('loadFailed')}</h3><p class="small muted">${loadError}</p><button class="btn primary empty-action" id="retry">${I('refresh', 14)}${t('retry')}</button></div></div>`);
+  const b = $('retry');
+  if (b) b.onclick = async () => { try { await loadBase(); loadError = null; show(tab); } catch (e) { loadError = e.message; showError(); } };
+}
+
 function show(next) {
-  tab = next || 'go';
+  // Als Reiter im Bereich „Projekte“ (contributes.tabs) gibt es nur „Loslegen“
+  tab = Hostwerk.embed === 'tab' ? 'go' : next || 'go';
+  if (loadError && ['go', 'connect', 'log'].includes(tab)) { for (const el of document.querySelectorAll('[data-tab]')) el.hidden = el.dataset.tab !== tab; showError(); return; }
   for (const el of document.querySelectorAll('[data-tab]')) el.hidden = el.dataset.tab !== tab;
   const fn = { memory: renderMemory, go: renderGo, connect: renderConnect, tokens: renderTokens, tips: renderTips, log: renderLog }[tab];
   if (fn) Promise.resolve(fn()).catch(fail);
@@ -337,11 +407,18 @@ Hostwerk.ready().then(async (info) => {
   tab = info.tab || 'go';
   Hostwerk.on('tab', show);
   Hostwerk.on('lang', () => show(tab));
-  try { await loadBase(); } catch (e) { fail(e); }
+  Hostwerk.on('action', runAction);
+  Hostwerk.on('settings', (v) => { settings = v || {}; if (tab === 'tokens') show(tab); });
+  try { await loadBase(); } catch (e) { loadError = e.message; }
   show(tab);
-  // Stand regelmäßig auffrischen (Verbindung, Installation) – nur wenn sichtbar und ohne Eingabe zu stören
-  setInterval(async () => {
-    if (document.hidden || document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName)) return;
+  if (info.action) runAction(info.action);
+  // Stand auffrischen (Verbindung, Installation): wenn der Reiter wieder sichtbar wird und sonst selten –
+  // nie im Hintergrund und ohne eine Eingabe zu stören
+  const refresh = async () => {
+    if (document.hidden || loadError || (document.activeElement && /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName))) return;
     try { const ns = await Hostwerk.get('/claude/status'); if (JSON.stringify(ns) !== JSON.stringify(st)) { st = ns; if (tab === 'go' || tab === 'connect' || tab === 'log') show(tab); } } catch { /* offline */ }
-  }, 20000);
+  };
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+  window.addEventListener('focus', refresh);
+  setInterval(refresh, 60000);
 });

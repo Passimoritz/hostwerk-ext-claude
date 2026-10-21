@@ -114,5 +114,33 @@
   };
   const icon = (name, size = 16) => `<svg class="cl-ico" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON[name] || ICON.sparkles}</svg>`;
 
-  return { shellQuote, startCommand, usageSummary, TASKS, TIPS, CATS, filterTips, ICON, icon };
+  /** Eigene Auftrags-Vorlagen: nur Titel (≤ 40) und Text (≤ 2000), mit stabiler Kennung. */
+  function cleanTemplates(list) {
+    const out = [];
+    for (const x of Array.isArray(list) ? list : []) {
+      const title = String((x && x.title) || '').replace(/\s+/g, ' ').trim().slice(0, 40);
+      const text = String((x && x.text) || '').trim().slice(0, 2000);
+      if (!title || !text) continue;
+      const id = /^[a-z0-9]{6,20}$/.test((x && x.id) || '') ? x.id : `t${Math.abs([...title + text].reduce((h, c) => ((h << 5) - h + c.charCodeAt(0)) | 0, 7)).toString(36)}`;
+      out.push({ id, title, text });
+    }
+    return out;
+  }
+  /** Zum Teilen im Team: kurzer Text, den andere unter „Vorlagen einfügen“ wieder einlesen. */
+  function exportTemplates(list) { return JSON.stringify({ hostwerkClaudeTemplates: 1, templates: cleanTemplates(list).map(({ title, text }) => ({ title, text })) }); }
+  function importTemplates(text) {
+    try { const j = JSON.parse(String(text || '').trim()); return cleanTemplates(Array.isArray(j) ? j : j && j.templates); } catch { return []; }
+  }
+
+  /** Token-Tagesgrenze: heutiger Verbrauch (Tag im Format JJJJ-MM-TT, Ortszeit) gegen die Grenze. */
+  function budgetState(days, limit, now = new Date()) {
+    const pad = (x) => String(x).padStart(2, '0');
+    const key = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const d = (Array.isArray(days) ? days : []).find((x) => String(x.date || '').slice(0, 10) === key);
+    const today = d ? Number(d.total) || 0 : null;
+    const pct = today == null || !limit ? 0 : Math.round((today / limit) * 100);
+    return { today, pct, level: !limit || today == null ? 'none' : pct >= 100 ? 'over' : pct >= 80 ? 'warn' : 'ok' };
+  }
+
+  return { shellQuote, startCommand, usageSummary, TASKS, TIPS, CATS, filterTips, ICON, icon, cleanTemplates, exportTemplates, importTemplates, budgetState };
 }));

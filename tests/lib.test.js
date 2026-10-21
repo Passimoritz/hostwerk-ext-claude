@@ -37,3 +37,26 @@ test('Symbole sind reines SVG ohne Skript', () => {
   for (const [k, v] of Object.entries(CL.ICON)) assert.ok(!/script|on\w+=/i.test(v), k);
   assert.ok(CL.icon('play').startsWith('<svg'));
 });
+
+test('eigene Vorlagen: säubern, teilen, einlesen', () => {
+  const clean = CL.cleanTemplates([{ title: '  Review  ', text: 'Prüfe den PR' }, { title: '', text: 'x' }, { title: 'x'.repeat(60), text: 'y' }, null]);
+  assert.strictEqual(clean.length, 2);
+  assert.strictEqual(clean[0].title, 'Review');
+  assert.strictEqual(clean[1].title.length, 40);
+  assert.ok(/^t[a-z0-9]+$/.test(clean[0].id), 'stable id');
+  assert.strictEqual(CL.cleanTemplates([{ title: 'Review', text: 'Prüfe den PR' }])[0].id, clean[0].id, 'same template → same id');
+  const shared = CL.exportTemplates(clean);
+  assert.deepStrictEqual(CL.importTemplates(shared).map((x) => x.title), ['Review', 'x'.repeat(40)]);
+  assert.deepStrictEqual(CL.importTemplates('kein JSON'), []);
+  assert.strictEqual(CL.importTemplates('[{"title":"A","text":"B"}]').length, 1, 'plain list works too');
+});
+
+test('Token-Tagesgrenze: heutiger Tag, Stufen 80 % und 100 %', () => {
+  const now = new Date(2026, 9, 21, 15);
+  const days = [{ date: '2026-10-20', total: 999999 }, { date: '2026-10-21', total: 850 }];
+  assert.deepStrictEqual(CL.budgetState(days, 1000, now), { today: 850, pct: 85, level: 'warn' });
+  assert.strictEqual(CL.budgetState(days, 800, now).level, 'over');
+  assert.strictEqual(CL.budgetState(days, 5000, now).level, 'ok');
+  assert.strictEqual(CL.budgetState([{ date: '2026-10-20', total: 1 }], 1000, now).today, null, 'nothing measured today');
+  assert.strictEqual(CL.budgetState(days, 0, now).level, 'none');
+});

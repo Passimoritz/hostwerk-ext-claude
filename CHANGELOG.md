@@ -1,3 +1,14 @@
+## 1.3.0
+
+- Tab “Get going with AI” in the Projects area, shortcut Ctrl+Alt+C, quick search and “New” entry “Start Claude in a project”. / Reiter „Mit KI loslegen“ im Bereich Projekte, Kürzel Strg+Alt+C, Schnellsuche und „Neu“-Eintrag „Claude im Projekt starten“.
+- Button “Ask Claude with the graph” on the knowledge graph page. / Knopf „Claude mit dem Graphen fragen“ auf der Seite des Wissensgraphen.
+- Daily token limit with notifications at 80 % and 100 % (small server part, Settings → Notifications). / Token-Tagesgrenze mit Benachrichtigung bei 80 % und 100 % (kleiner Server-Teil, Einstellungen → Benachrichtigungen).
+- Own task templates – saved for everyone on this Hostwerk, shareable with the team. / Eigene Auftrags-Vorlagen – für alle auf diesem Hostwerk gespeichert, im Team teilbar.
+- No polling every 20 s any more: refresh when the tab becomes visible again (and every minute while visible). / Keine Abfrage mehr alle 20 s: frisch, sobald der Reiter wieder sichtbar wird (und jede Minute, solange er sichtbar ist).
+- Error state with “Try again”, dates in Hostwerk’s language, design scale instead of fixed sizes. / Fehlerzustand mit „Erneut versuchen“, Datum in Hostwerk-Sprache, Design-Skala statt fester Größen.
+- READMEs name it consistently (AI Connect / KI-Anbindung, id claude) and describe the Memory tab. / READMEs mit einheitlichem Namen (KI-Anbindung / AI Connect, Kennung claude) und dem Reiter „Gedächtnis“.
+- More tests; place in the sidebar under “System”; other extensions may add tabs; release package contains everything except the repository tooling. / Mehr Tests; Platz in der Seitenleiste unter „System“; andere Erweiterungen dürfen Reiter ergänzen; Release-Paket enthält alles außer dem Repo-Werkzeug.
+
 ## 1.2.1
 
 - The category filter in “Tips & tricks” is a button group for screen readers (aria-pressed). / Der Kategorie-Filter unter „Tipps & Tricks“ ist für Bildschirmleser eine Knopfgruppe (aria-pressed).

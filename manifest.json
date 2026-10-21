@@ -17,7 +17,9 @@
     "run:terminal",
     "read:knowledge",
     "connect:claude",
-    "storage"
+    "storage",
+    "native",
+    "extend:extensions"
   ],
   "page": {
     "title": {
@@ -79,13 +81,118 @@
         },
         "icon": "list"
       }
-    ]
+    ],
+    "nav": {
+      "group": "system"
+    }
   },
-  "version": "1.2.1",
+  "version": "1.3.0",
   "author": "Hostwerk",
   "homepage": "https://github.com/Passimoritz/hostwerk-ext-claude",
   "license": "MIT",
   "icon": "icon.svg",
   "banner": "banner.svg",
-  "hostwerk": ">=2.9.0"
+  "hostwerk": ">=2.9.0",
+  "backend": "server/index.js",
+  "settingsTab": "notifications",
+  "settings": [
+    {
+      "key": "dailyTokens",
+      "type": "number",
+      "label": {
+        "de": "Claude Code: Token-Tagesgrenze (0 = aus)",
+        "en": "Claude Code: daily token limit (0 = off)"
+      },
+      "default": 0,
+      "min": 0,
+      "max": 100000000
+    },
+    {
+      "key": "budgetNotify",
+      "type": "switch",
+      "label": {
+        "de": "Bei 80 % und beim Erreichen der Tagesgrenze benachrichtigen",
+        "en": "Notify at 80 % and when the daily limit is reached"
+      },
+      "default": true
+    }
+  ],
+  "contributes": {
+    "tabs": [
+      {
+        "id": "go",
+        "on": "area:projects",
+        "title": {
+          "de": "Mit KI loslegen",
+          "en": "Get going with AI"
+        },
+        "icon": "sparkles",
+        "file": "page/index.html"
+      }
+    ],
+    "actions": [
+      {
+        "id": "start-claude",
+        "on": [
+          "palette"
+        ],
+        "title": {
+          "de": "Claude im Projekt starten",
+          "en": "Start Claude in a project"
+        },
+        "icon": "terminal"
+      }
+    ],
+    "new": [
+      {
+        "id": "claude-go",
+        "title": {
+          "de": "Claude im Projekt starten",
+          "en": "Start Claude in a project"
+        },
+        "icon": "sparkles"
+      }
+    ],
+    "shortcuts": [
+      {
+        "id": "start-claude",
+        "title": {
+          "de": "Claude im Projekt starten",
+          "en": "Start Claude in a project"
+        },
+        "keys": "ctrl+alt+c",
+        "action": "start-claude"
+      }
+    ],
+    "extends": [
+      {
+        "id": "knowledge-graph",
+        "version": ">=1.5.0",
+        "actions": [
+          {
+            "id": "graph-claude",
+            "title": {
+              "de": "Claude mit dem Graphen fragen",
+              "en": "Ask Claude with the graph"
+            },
+            "icon": "sparkles"
+          }
+        ]
+      }
+    ]
+  },
+  "synergies": [
+    {
+      "with": "knowledge-graph",
+      "title": {
+        "de": "Claude liest den Wissensgraphen statt Dutzender Dateien",
+        "en": "Claude reads the knowledge graph instead of dozens of files"
+      }
+    }
+  ],
+  "allowExtensions": {
+    "*": [
+      "tabs"
+    ]
+  }
 }
