@@ -1,3 +1,7 @@
+## 1.5.1
+
+- New animated icon and banner in the common Hostwerk style (isometric block). / Neues animiertes Symbol und Banner im gemeinsamen Hostwerk-Stil (isometrischer Block).
+
 ## 1.5.0
 
 - Lives in the AI assistant: the whole page is the “AI Connect” tab (AI → AI Connect), its tabs are a list on the left, the address is `#/ki/anbindung/<tab>`; no own sidebar entry any more. Old links (`#/ext/claude/…`) lead there. Needs a Hostwerk with `"page": true` tabs – older versions show the page as a plain AI tab. / Steckt im KI-Helfer: die ganze Seite ist der Reiter „KI-Anbindung“ (KI → KI-Anbindung), ihre Reiter stehen links als Liste, Adresse `#/ki/anbindung/<reiter>`; kein eigener Eintrag mehr in der Seitenleiste. Alte Links (`#/ext/claude/…`) führen dorthin. Braucht ein Hostwerk mit `"page": true`-Reitern – ältere zeigen die Seite als normalen KI-Reiter.
