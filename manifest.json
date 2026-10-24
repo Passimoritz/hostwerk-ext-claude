@@ -90,6 +90,7 @@
   "license": "MIT",
   "icon": "icon.svg",
   "banner": "banner.svg",
+  "videos": "videos/index.json",
   "hostwerk": ">=2.9.0",
   "backend": "server/index.js",
   "settingsTab": "notifications",

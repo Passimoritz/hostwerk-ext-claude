@@ -1,0 +1,32 @@
+[
+  {
+    "id": "claude",
+    "lang": "de",
+    "title": "Claude – der Rundgang",
+    "seconds": 62
+  },
+  {
+    "id": "claude-stimme",
+    "lang": "de",
+    "title": "Claude – der Rundgang",
+    "seconds": 62,
+    "voice": true,
+    "of": "claude",
+    "section": "stimme"
+  },
+  {
+    "id": "claude-en",
+    "lang": "en",
+    "title": "Claude – the full tour",
+    "seconds": 62
+  },
+  {
+    "id": "claude-stimme-en",
+    "lang": "en",
+    "title": "Claude – the full tour",
+    "seconds": 62,
+    "voice": true,
+    "of": "claude-en",
+    "section": "stimme"
+  }
+]
