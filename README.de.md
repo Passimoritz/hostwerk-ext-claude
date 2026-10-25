@@ -8,9 +8,11 @@ Du findest sie im **KI-Helfer** als Reiter **KI-Anbindung** (`#/ki/anbindung`) �
 
 [English](README.md) · Offizielle [Hostwerk](https://github.com/Passimoritz/hostwerk-public)-Erweiterung. Kennung: `claude` (so hieß sie anfangs – bleibt, damit Updates weiter funktionieren). Der Motor bleibt in Hostwerk, diese Erweiterung ist seine Oberfläche – plus ein kleiner Server-Teil für die Token-Grenze.
 
+![Bildschirmfoto](docs/screenshot.de.png)
+
 Was nur mit Claude funktioniert, steht auf der Seite und hier als **für Claude** dabei.
 
-## Reiter
+## Was sie kann
 
 - **Gedächtnis:** was jede KI (Claude, OpenAI, Gemini, lokal …) aus deinem Gedankennetz bekommt – Themen, Projekt, Graph, Umfang – mit Vorschau je Anbieter.
 - **Loslegen:** Projekt und KI-Werkzeug wählen (Claude Code, Codex CLI oder Gemini CLI), Auftrag beschreiben (oder Vorlage wie *Fehler beheben*, *Tests schreiben* – oder eigene Vorlagen). Hostwerk öffnet das Werkzeug im Projektordner und tippt den Befehl ins Hostwerk-Terminal, du startest ihn mit Enter. Die Werkzeuge lassen sich von hier aus installieren; claude.ai, ChatGPT und Gemini öffnen sich im Browser.
@@ -36,6 +38,12 @@ Was nur mit Claude funktioniert, steht auf der Seite und hier als **für Claude*
 - Knopf **KI mit dem Graphen fragen** auf der Seite der Erweiterung Wissensgraph
 - **Token-Tagesgrenze für Claude Code** (Einstellungen → Benachrichtigungen): bei 80 % und beim Erreichen meldet sich Hostwerk über deine Benachrichtigungen – je einmal am Tag
 - **Eigene Auftrags-Vorlagen:** für alle gespeichert, die dieses Hostwerk nutzen, und als kurzer Text im Team teilbar (*Vorlagen teilen* / *Vorlagen einfügen*)
+
+## Installieren
+
+In Hostwerk: **Erweiterungen → Entdecken** und „Installieren“ klicken. Oder von Hand: die Zip-Datei aus dem [neuesten Release](../../releases/latest) laden → *Erweiterungen → Hinzufügen → Datei*.
+
+Sie läuft abgeschottet in Hostwerk – sie bekommt nur die Rechte, die sie nennt, und Hostwerk zeigt sie vor dem Installieren.
 
 ## Rechte
 

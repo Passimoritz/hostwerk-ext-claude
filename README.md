@@ -8,9 +8,11 @@ You find it in the **AI assistant** as the **AI Connect** tab (`#/ki/anbindung`)
 
 [Deutsch](README.de.md) · An official [Hostwerk](https://github.com/Passimoritz/hostwerk-public) extension. Extension id: `claude` (the name it had at first – kept so updates keep working). The engine stays inside Hostwerk; this extension is its interface plus a small server part for the token limit.
 
+![Screenshot](docs/screenshot.png)
+
 Parts that only work with Claude are marked **for Claude** on the page and below.
 
-## Tabs
+## What it does
 
 - **Memory:** what every AI (Claude, OpenAI, Gemini, local …) gets from your thought network – topics, project, graph, size – with a preview per provider.
 - **Get going:** pick a project and an AI tool (Claude Code, Codex CLI or Gemini CLI), describe the task (or use a template such as *Fix a bug* or *Write tests*, or your own templates). Hostwerk opens the tool in the project folder and types the command into the Hostwerk terminal. You start it with Enter. Install the tools from the same page, or open claude.ai, ChatGPT or Gemini in the browser.
@@ -37,6 +39,12 @@ Parts that only work with Claude are marked **for Claude** on the page and below
 - **Daily token limit for Claude Code** (Settings → Notifications): at 80 % and when it is reached Hostwerk tells you through your notifications – once per day each
 - **Own templates** for tasks: saved for everyone who uses this Hostwerk, shared with the team as a short text (*Share templates* / *Paste templates*)
 
+## Install
+
+In Hostwerk: **Extensions → Discover** and click “Install”. Or manually: download the zip from the [latest release](../../releases/latest) → *Extensions → Add → File*.
+
+It runs sandboxed in Hostwerk – it only gets the permissions it lists, and Hostwerk shows them before installing.
+
 ## Permissions
 
 The permission names still say `claude` for compatibility; they cover every AI.
@@ -54,7 +62,7 @@ The permission names still say `claude` for compatibility; they cover every AI.
 
 The lists of AI tools, Codex/Gemini CLI connection and `GEMINI.md` need Hostwerk 3.0 or newer; with older versions the page shows the Claude parts only.
 
-## Development
+## Develop
 
 ```
 node --test tests/*.test.js
