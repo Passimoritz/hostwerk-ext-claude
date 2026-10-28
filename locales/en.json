@@ -133,6 +133,8 @@
   "memMindOff": "The thought net is switched off in the settings – then nothing goes along.",
   "memWhat": "What goes along",
   "memProject": "Area of the attached project",
+  "clusterMe": "About me",
+  "clusterGeneral": "General",
   "memGraph": "Matching excerpt from the knowledge graph (if the project has one)",
   "memMax": "At most {n} tokens",
   "memPrivate": "Private notes never go along. Online providers additionally get secrets blacked out.",
@@ -190,5 +192,8 @@
   "mcpSettings": "MCP settings",
   "needsNewerHostwerk": "This needs Hostwerk 3.0 or newer.",
   "copyPath": "Copy path",
-  "pathCopied": "Path copied"
+  "pathCopied": "Path copied",
+  "more_tokens": "Save tokens",
+  "more_tips": "Tips & tricks",
+  "more_log": "Log"
 }

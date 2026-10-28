@@ -4,7 +4,7 @@
 
 Connect any AI with Hostwerk – Cursor, VS Code, Windsurf, LM Studio, Claude, Codex, Gemini and any other MCP app: what every AI knows about you and your projects (memory), your AI apps connected to it, get going right in your project, save tokens, tips & tricks.
 
-You find it in the **AI assistant** as the **AI Connect** tab (`#/ki/anbindung`) – its tabs are a list on the left there, like in the settings.
+You find it in **AI → Settings**: the section **Connections** (Claude, Cursor, VS Code, MCP …) and **Sharing with AI apps** under *Memory*; **Get going with AI** sits in every project. The whole page (also *Save tokens*, *Tips & tricks*, *Log*) opens from *Extensions → Open*. Needs Hostwerk with SDK 3.10 – older versions keep version 1.5 with the *AI Connect* tab.
 
 [Deutsch](README.de.md) · An official [Hostwerk](https://github.com/Passimoritz/hostwerk-public) extension. Extension id: `claude` (the name it had at first – kept so updates keep working). The engine stays inside Hostwerk; this extension is its interface plus a small server part for the token limit.
 

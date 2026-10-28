@@ -8,8 +8,8 @@
     "en": "AI Connect"
   },
   "description": {
-    "de": "Jede KI mit Hostwerk verbinden – Cursor, VS Code, Windsurf, LM Studio, Claude, Codex, Gemini CLI und jede andere MCP-App: Gedächtnis je KI einstellen, App mit einem Klick bzw. passendem Weg anbinden, im Projekt loslegen, Tokens sparen, Tipps & Tricks. Steckt im KI-Helfer als Reiter „KI-Anbindung“.",
-    "en": "Connect any AI with Hostwerk – Cursor, VS Code, Windsurf, LM Studio, Claude, Codex, Gemini CLI and any other MCP app: set the memory each AI gets, connect your app in one click or the right way for it, get going in your project, save tokens, tips & tricks. Lives in the AI assistant as the “AI Connect” tab."
+    "de": "Jede KI mit Hostwerk verbinden – Cursor, VS Code, Windsurf, LM Studio, Claude, Codex, Gemini CLI und jede andere MCP-App: Gedächtnis je KI einstellen, App mit einem Klick bzw. passendem Weg anbinden, im Projekt loslegen, Tokens sparen, Tipps & Tricks. Steckt in KI → Einstellungen („Verbindungen“, Gedächtnis-Freigabe) und unter Projekte („Mit KI loslegen“).",
+    "en": "Connect any AI with Hostwerk – Cursor, VS Code, Windsurf, LM Studio, Claude, Codex, Gemini CLI and any other MCP app: set the memory each AI gets, connect your app in one click or the right way for it, get going in your project, save tokens, tips & tricks. Lives in AI → Settings (“Connections”, memory sharing) and under Projects (“Get going with AI”)."
   },
   "permissions": [
     "read:claude",
@@ -32,6 +32,7 @@
     },
     "icon": "sparkles",
     "file": "page/index.html",
+    "route": "claude",
     "tabs": [
       {
         "id": "memory",
@@ -84,14 +85,15 @@
     ],
     "nav": false
   },
-  "version": "1.5.1",
+  "version": "1.6.0",
   "author": "Hostwerk",
   "homepage": "https://github.com/Passimoritz/hostwerk-ext-claude",
   "license": "MIT",
   "icon": "icon.svg",
   "banner": "banner.svg",
   "videos": "videos/index.json",
-  "hostwerk": ">=2.9.0",
+  "hostwerk": ">=3.1.0",
+  "sdkVersion": "3.10",
   "backend": "server/index.js",
   "settingsTab": "notifications",
   "settings": [
@@ -118,17 +120,6 @@
   ],
   "contributes": {
     "tabs": [
-      {
-        "id": "anbindung",
-        "on": "area:ai",
-        "page": true,
-        "title": {
-          "de": "KI-Anbindung",
-          "en": "AI Connect"
-        },
-        "icon": "network",
-        "file": "page/index.html"
-      },
       {
         "id": "go",
         "on": "area:projects",
@@ -188,6 +179,28 @@
             "icon": "sparkles"
           }
         ]
+      }
+    ],
+    "sections": [
+      {
+        "id": "verbindungen",
+        "on": "ai.settings",
+        "title": {
+          "de": "Verbindungen",
+          "en": "Connections"
+        },
+        "icon": "network",
+        "file": "page/index.html"
+      },
+      {
+        "id": "memory",
+        "on": "ai.memory",
+        "title": {
+          "de": "Freigabe an KI-Apps",
+          "en": "Sharing with AI apps"
+        },
+        "icon": "sparkles",
+        "file": "page/index.html"
       }
     ]
   },

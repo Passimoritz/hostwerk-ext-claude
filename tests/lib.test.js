@@ -105,10 +105,15 @@ test('MCP-Einstellungen je App: Claude/Cursor-Schreibweise (mcpServers) und VS C
   assert.strictEqual(CL.clientConfig('cursor', 'kein json'), '');
 });
 
-test('Manifest: Seite steckt im KI-Helfer (ganze Seite als Reiter), kein eigener Eintrag in der Seitenleiste, Texte neutral', () => {
+test('Manifest: Abschnitte in KI → Einstellungen (Verbindungen, Gedächtnis-Freigabe), „Loslegen“ in Projekten, kein eigener Eintrag in der Seitenleiste, Texte neutral', () => {
   const m = require('../manifest.json');
-  const tab = m.contributes.tabs.find((x) => x.page);
-  assert.ok(tab && tab.on === 'area:ai' && tab.file === m.page.file && tab.id === 'anbindung');
+  // SDK 3.10: kein eigener KI-Reiter mehr, sondern Abschnitte – ältere Hostwerk-Versionen behalten die vorige Fassung
+  assert.ok(!m.contributes.tabs.some((x) => x.on === 'area:ai'));
+  assert.ok(m.contributes.tabs.some((x) => x.id === 'go' && x.on === 'area:projects'));
+  const sec = Object.fromEntries((m.contributes.sections || []).map((x) => [x.id, x]));
+  assert.ok(sec.verbindungen && sec.verbindungen.on === 'ai.settings' && sec.verbindungen.file === m.page.file);
+  assert.ok(sec.memory && sec.memory.on === 'ai.memory' && sec.memory.file === m.page.file);
+  assert.strictEqual(m.sdkVersion, '3.10');
   assert.strictEqual(m.page.nav, false);
   for (const l of ['de', 'en']) {
     assert.ok(!/Claude/.test(m.name[l]) && !/Claude/.test(m.page.title[l]));

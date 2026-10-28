@@ -4,7 +4,7 @@
 
 Jede KI mit Hostwerk verbinden – Cursor, VS Code, Windsurf, LM Studio, Claude, Codex, Gemini und jede andere MCP-App: was jede KI über dich und deine Projekte weiß (Gedächtnis), deine KI-Apps daran angebunden, direkt im Projekt loslegen, Tokens sparen, Tipps & Tricks.
 
-Du findest sie im **KI-Helfer** als Reiter **KI-Anbindung** (`#/ki/anbindung`) – ihre Reiter stehen dort links als Liste, wie bei den Einstellungen.
+Du findest sie unter **KI → Einstellungen**: Abschnitt **Verbindungen** (Claude, Cursor, VS Code, MCP …) und **Freigabe an KI-Apps** beim *Gedächtnis*; **Mit KI loslegen** steckt in jedem Projekt. Die ganze Seite (auch *Token sparen*, *Tipps & Tricks*, *Protokoll*) öffnet *Erweiterungen → Öffnen*. Braucht Hostwerk mit SDK 3.10 – ältere Versionen behalten Version 1.5 mit dem Reiter *KI-Anbindung*.
 
 [English](README.md) · Offizielle [Hostwerk](https://github.com/Passimoritz/hostwerk-public)-Erweiterung. Kennung: `claude` (so hieß sie anfangs – bleibt, damit Updates weiter funktionieren). Der Motor bleibt in Hostwerk, diese Erweiterung ist seine Oberfläche – plus ein kleiner Server-Teil für die Token-Grenze.
 

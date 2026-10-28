@@ -76,7 +76,7 @@
 .cl-tool { display: flex; flex-direction: column; border-radius: var(--r-xl); border: 1px solid var(--line); background: var(--surface); overflow: hidden; animation: cl-in .35s ease-out both; }
 .cl-tool.on { border-color: color-mix(in srgb, var(--ok) 45%, var(--line)); }
 .cl-tool-head { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4) 0; flex-wrap: wrap; }
-.cl-tool-head h3 { margin: 0; font-size: var(--fs-lg); flex: 1; min-width: 0; }
+.cl-tool-head h3 { margin: 0; font-size: var(--fs-lg); flex: 1 1 auto; min-width: 0; overflow-wrap: anywhere; }
 .cl-tool-body { padding: var(--sp-2) var(--sp-4) var(--sp-3); display: flex; flex-direction: column; gap: var(--sp-2); flex: 1; }
 .cl-save { display: flex; align-items: center; gap: var(--sp-2); }
 .cl-meter { flex: 1; height: 6px; border-radius: var(--r-xs); background: var(--surface-2); overflow: hidden; }
@@ -139,3 +139,6 @@
 .cl-tpl { flex-wrap: wrap; }
 .cl-tpl-form { gap: var(--sp-2); }
 .cl-budget { margin: var(--sp-2) 0; }
+/* Als Abschnitt in KI → Einstellungen (SDK 3.10): Titel steht schon auf der Karte, der Rest der Seite ist einen Klick entfernt */
+html[data-embed="section"] .cl-mem-hero h2 { display: none; }
+.cl-more { margin-top: var(--sp-3); flex-wrap: wrap; }

@@ -282,7 +282,7 @@ async function renderTokens() {
         </div></div></div>`)}</div>
     <div class="card"><div class="card-head">${I('shield')}<h3>${t('compare')}</h3></div>
       <div class="table-wrap"><table class="table small"><thead><tr><th>${t('tool')}</th><th>${t('kind')}</th><th>${t('area')}</th><th>${t('savings')}</th><th>${t('licenceCol')}</th><th>${t('telemetry')}</th><th>${t('here')}</th></tr></thead>
-        <tbody>${d.tools.map((x) => html`<tr><td><b>${x.name}</b></td><td>${KIND(x.kind)}</td><td>${x.area}</td><td>${x.savings}</td><td>${x.license}</td><td>${x.telemetry}</td><td>${x.installed ? html`<span class="c-ok">${t('installed')}</span>` : x.installable ? t('oneClick') : x.builtin ? t('builtIn') : t('byHand')}</td></tr>`)}</tbody></table></div>
+        <tbody>${d.tools.map((x) => html`<tr><td><b>${x.name}</b></td><td style="white-space:nowrap">${KIND(x.kind)}</td><td>${x.area}</td><td>${x.savings}</td><td>${x.license}</td><td>${x.telemetry}</td><td>${x.installed ? html`<span class="c-ok">${t('installed')}</span>` : x.installable ? t('oneClick') : x.builtin ? t('builtIn') : t('byHand')}</td></tr>`)}</tbody></table></div>
       <div class="card-body tiny muted">${t('compareHint')}</div></div>
     <div class="card" id="discover"><div class="card-head">${I('compass')}<h3>${t('discoverTitle')}</h3><span class="small muted">${t('discoverSub')}</span></div><div class="card-body"><div class="hw-skeleton" style="height:60px"></div></div></div>
   </div>`);
@@ -319,7 +319,7 @@ async function loadDiscover() {
   try { list = await Hostwerk.get('/claude/tools/discover'); } catch (e) { list = { error: e.message }; }
   const box = document.querySelector('#discover .card-body'); if (!box) return;
   Hostwerk.render(box, list.error ? html`<div class="small muted">${list.error}</div>` : !list.length ? html`<div class="small muted">${t('discoverNone')}</div>`
-    : html`${list.map((r) => html`<div class="list-item">${I('sparkles', 15)}<div class="grow small" style="min-width:0"><b>${r.repo}</b><div class="tiny muted">${r.description || ''}</div></div><span class="tiny muted">${I('star', 11)} ${n(r.stars)}</span><button class="btn xs ghost" data-url="${r.url}">${I('external', 13)}</button></div>`)}<div class="tiny muted" style="margin-top:var(--sp-2)">${t('discoverHint')}</div>`);
+    : html`${list.map((r) => html`<div class="list-item">${I('sparkles', 15)}<div class="grow small" style="min-width:0"><b>${r.repo}</b><div class="tiny muted">${r.description || ''}</div></div><span class="tiny muted">${I('star', 11)} ${n(r.stars)}</span><button class="btn xs ghost" data-url="${r.url}" title="${r.repo}" aria-label="${r.repo}">${I('external', 13)}</button></div>`)}<div class="tiny muted" style="margin-top:var(--sp-2)">${t('discoverHint')}</div>`);
   wireUrls();
 }
 
@@ -366,6 +366,8 @@ let memProvider = '';
 async function renderMemory() {
   try { mem = await Hostwerk.get('/ai/memory-share'); } catch (e) { Hostwerk.render('#memory', html`<div class="card"><div class="empty"><b>${t('memUnavailable')}</b><p class="small muted">${e.message}</p></div></div>`); return; }
   const P = mem.available.providers; if (!memProvider || !P.some((x) => x.id === memProvider)) memProvider = (P[0] || {}).id || '';
+  // Die zwei festen Bereiche des Gedankennetzes heißen in Hostwerks Sprache, eigene behalten ihren Namen
+  const CLUSTER = { ich: 'clusterMe', allgemein: 'clusterGeneral' };
   const cl = mem.available.clusters.filter((c) => c.kind !== 'project');
   const sw = (id, on, label) => html`<label class="cl-sw"><input type="checkbox" id="${id}" ${on ? raw('checked') : ''}><span>${label}</span></label>`;
   Hostwerk.render('#memory', html`<div class="cl-stack cl-fade">
@@ -374,7 +376,7 @@ async function renderMemory() {
     ${!mem.mindOn ? html`<div class="callout warn"><div class="callout-body small">${t('memMindOff')}</div></div>` : ''}
     <div class="grid grid-2">
       <div class="card"><div class="card-head">${I('book')}<h3>${t('memWhat')}</h3></div><div class="card-body cl-stack" style="gap:var(--sp-2)">
-        ${cl.map((c) => sw(`mc-${c.id}`, mem.clusters.includes(c.id), c.title))}
+        ${cl.map((c) => sw(`mc-${c.id}`, mem.clusters.includes(c.id), CLUSTER[c.id] ? t(CLUSTER[c.id]) : c.title))}
         ${sw('mProj', mem.project, t('memProject'))}
         ${sw('mGraph', mem.graph, t('memGraph'))}
         <label class="label" for="mMax">${t('memMax', { n: n(mem.maxTokens) })}</label>
@@ -457,16 +459,31 @@ function showError() {
   if (b) b.onclick = async () => { try { await loadBase(); loadError = null; show(tab); } catch (e) { loadError = e.message; showError(); } };
 }
 
+// Als Abschnitt im Bereich KI (Hostwerk mit SDK 3.10, contributes.sections): Abschnitt → Teil der Seite
+const SECTION_TAB = { verbindungen: 'connect', memory: 'memory' };
+const sectionTab = () => SECTION_TAB[((Hostwerk.context || {}).section) || ''] || 'connect';
+
 function show(next) {
-  // Als Reiter im Bereich „Projekte“ (contributes.tabs) gibt es nur „Loslegen“
-  tab = Hostwerk.embed === 'tab' ? 'go' : next || 'go';
+  // Als Reiter im Bereich „Projekte“ (contributes.tabs) gibt es nur „Loslegen“, als Abschnitt in KI → Einstellungen nur seinen Teil
+  tab = Hostwerk.embed === 'tab' ? 'go' : Hostwerk.embed === 'section' ? sectionTab() : next || 'go';
   if (loadError && ['go', 'connect', 'log'].includes(tab)) { for (const el of document.querySelectorAll('[data-tab]')) el.hidden = el.dataset.tab !== tab; showError(); return; }
   for (const el of document.querySelectorAll('[data-tab]')) el.hidden = el.dataset.tab !== tab;
   const fn = { memory: renderMemory, go: renderGo, connect: renderConnect, tokens: renderTokens, tips: renderTips, log: renderLog }[tab];
-  if (fn) Promise.resolve(fn()).catch(fail);
+  if (fn) Promise.resolve(fn()).then(sectionMore).catch(fail);
+}
+
+/** Im Abschnitt: der Rest der KI-Anbindung (Token sparen, Tipps, Protokoll) liegt auf ihrer ganzen Seite. */
+function sectionMore() {
+  if (Hostwerk.embed !== 'section' || tab !== 'connect') return;
+  const box = document.querySelector('[data-tab="connect"]'); // neben #connect – renderConnect() zeichnet nur #connect neu
+  if (!box || box.querySelector('.cl-more')) return;
+  const more = document.createElement('div');
+  box.appendChild(more);
+  Hostwerk.render(more, html`<div class="cl-more row-tight">${['tokens', 'tips', 'log'].map((id) => html`<button type="button" class="btn sm ghost" data-full="${id}">${t(`more_${id}`)}</button>`)}</div>`);
+  for (const b of more.querySelectorAll('[data-full]')) b.onclick = () => Hostwerk.navigate(`/ext/claude/${b.dataset.full}`).catch(fail);
 }
 Hostwerk.ready().then(async (info) => {
-  tab = info.tab || 'go';
+  tab = info.embed === 'section' ? sectionTab() : info.tab || 'go';
   Hostwerk.on('tab', show);
   Hostwerk.on('lang', () => show(tab));
   Hostwerk.on('action', runAction);

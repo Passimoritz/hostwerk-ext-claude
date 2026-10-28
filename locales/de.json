@@ -133,6 +133,8 @@
   "memMindOff": "Das Gedankennetz ist in den Einstellungen ausgeschaltet – dann geht nichts mit.",
   "memWhat": "Was mitgeht",
   "memProject": "Bereich des angehängten Projekts",
+  "clusterMe": "Über mich",
+  "clusterGeneral": "Allgemein",
   "memGraph": "Passender Ausschnitt aus dem Wissensgraphen (wenn das Projekt einen hat)",
   "memMax": "Höchstens {n} Tokens",
   "memPrivate": "Private Notizen gehen nie mit. Online-Anbieter bekommen Geheimnisse zusätzlich geschwärzt.",
@@ -190,5 +192,8 @@
   "mcpSettings": "MCP-Einstellungen",
   "needsNewerHostwerk": "Dafür braucht es Hostwerk 3.0 oder neuer.",
   "copyPath": "Pfad kopieren",
-  "pathCopied": "Pfad kopiert"
+  "pathCopied": "Pfad kopiert",
+  "more_tokens": "Token sparen",
+  "more_tips": "Tipps & Tricks",
+  "more_log": "Protokoll"
 }
