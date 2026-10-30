@@ -2,7 +2,7 @@
 /*
  * AI Connect – small server part (runs as part of Hostwerk for the official package): watches the daily token limit of
  * Claude Code (setting "dailyTokens") and tells the user through Hostwerk's notifications (push, Discord, ntfy, mail –
- * Live → Alerts) at 80 % and when the limit is reached – once per day each. The page itself stays in its frame.
+ * Go live → Monitoring → Messages) at 80 % and when the limit is reached – once per day each. The page itself stays in its frame.
  * Usage comes from Hostwerk's own measurement (ccusage, cached by Hostwerk) and is only read while a limit is set.
  * Data: data/claude-budget.json ({ day, sent: [80, 100] })
  */
