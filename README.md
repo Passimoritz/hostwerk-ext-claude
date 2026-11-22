@@ -14,7 +14,7 @@ Parts that only work with Claude are marked **for Claude** on the page and below
 
 ## What it does
 
-- **Memory:** what every AI (Claude, OpenAI, Gemini, local …) gets from your thought network – topics, project, graph, size – with a preview per provider.
+- **Memory:** what every AI (Claude, OpenAI, Gemini, local …) gets from your mind map – topics, project, graph, size – with a preview per provider.
 - **Get going:** pick a project and an AI tool (Claude Code, Codex CLI or Gemini CLI), describe the task (or use a template such as *Fix a bug* or *Write tests*, or your own templates). Hostwerk opens the tool in the project folder and types the command into the Hostwerk terminal. You start it with Enter. Install the tools from the same page, or open claude.ai, ChatGPT or Gemini in the browser.
 - **Connect:** pick your AI app and get exactly its way:
   - Claude Desktop: one click (Hostwerk adds itself);

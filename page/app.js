@@ -20,6 +20,7 @@ let pid = null;        // gewähltes Projekt
 let goal = '';
 let tools = null;      // /claude/tools
 let usage = null;      // /claude/tools/usage
+let usageAt = null;    // wann diese Seite zuletzt gemessen hat (Hostwerk merkt das Ergebnis bis zu 10 Minuten)
 let measuring = false;
 let tipCat = '';
 let tipQ = '';
@@ -39,12 +40,18 @@ const connected = () => !!(st && ((st.desktop && st.desktop.connected) || st.cod
 const project = () => (projects || []).find((p) => p.id === pid) || null;
 
 async function loadBase() {
-  [st, projects] = await Promise.all([Hostwerk.get('/claude/status'), Hostwerk.get('/projects').catch(() => [])]);
-  try { templates = (await Hostwerk.storage.get('templates')) || []; } catch { templates = []; }
-  try { const a = await Hostwerk.storage.get('agent'); if (a && CL.AGENTS.some((x) => x.id === a)) agent = a; } catch { /* Standard: Claude Code */ }
-  try { const c = await Hostwerk.storage.get('client'); if (c && CL.CLIENTS.some((x) => x.id === c)) client = c; } catch { /* noch keine Wahl */ }
-  try { settings = (await Hostwerk.settings.get()) || {}; } catch { settings = {}; }
-  if (!pid) { try { pid = await Hostwerk.storage.get('project'); } catch { pid = null; } }
+  // Alles gleichzeitig holen (früher nacheinander – unter Last spürbar langsamer Start)
+  // Projekte nicht still durch [] ersetzen: sonst hieße es bei einem Ladefehler „Noch keine Projekte“ – lieber Fehler mit „Erneut versuchen“
+  const opt = (p) => p.catch(() => null);
+  let tp; let a; let c; let s; let pp;
+  [st, projects, tp, a, c, s, pp] = await Promise.all([Hostwerk.get('/claude/status'), Hostwerk.get('/projects'),
+    opt(Hostwerk.storage.get('templates')), opt(Hostwerk.storage.get('agent')), opt(Hostwerk.storage.get('client')), opt(Hostwerk.settings.get()), pid ? null : opt(Hostwerk.storage.get('project'))]);
+  templates = Array.isArray(tp) ? tp : [];
+  if (a && CL.AGENTS.some((x) => x.id === a)) agent = a;
+  if (c && CL.CLIENTS.some((x) => x.id === c)) client = c;
+  settings = s || {};
+  if (!pid) pid = pp || null;
+  if (!Array.isArray(projects)) projects = [];
   if (!pid || !projects.some((p) => p.id === pid)) pid = projects[0] ? projects[0].id : null;
 }
 const setProject = (id) => { pid = id; Hostwerk.storage.set('project', id).catch(() => {}); };
@@ -86,7 +93,7 @@ function renderGo() {
           <div id="tplForm"></div>
           <div class="cl-cmd" title="${t('cmdPreview')}">${p ? `${p.path}> ` : ''}${cmd}</div>
           <div class="row-tight" style="flex-wrap:wrap">
-            <button class="btn primary" id="goStart" ${!p || !goal.trim() ? raw('disabled') : ''}>${I('play', 14)}${t('startWithGoal')}</button>
+            <button class="btn primary" id="goStart" title="${t('startKeys')}" ${!p || !goal.trim() ? raw('disabled') : ''}>${I('play', 14)}${t('startWithGoal')}</button>
             <button class="btn" id="goOpen" ${!p ? raw('disabled') : ''}>${I('terminal', 14)}${t('justOpen', { name: ag.label })}</button>
           </div>
           <div class="tiny muted">${t('goHint')}${agentConnected(agent) ? ' ' + t('goHintConnected') : ' ' + t('goHintConnect')}</div>
@@ -110,10 +117,12 @@ function renderGo() {
   </div>`);
   const pick = $('goProject'); if (pick) pick.onchange = () => { setProject(pick.value); renderGo(); };
   const ta = $('goal');
-  ta.oninput = () => { goal = ta.value; const b = $('goStart'); if (b) b.disabled = !project() || !goal.trim(); document.querySelector('.cl-cmd').textContent = `${project() ? project().path + '> ' : ''}${CL.startCommand(goal, { connected: agentConnected(agent), lang: lang(), agent })}`; };
+  ta.oninput = () => { goal = ta.value; const b = $('goStart'); if (b) b.disabled = !project() || !goal.trim(); const sv = $('tplSave'); if (sv) sv.disabled = !goal.trim(); document.querySelector('.cl-cmd').textContent = `${project() ? project().path + '> ' : ''}${CL.startCommand(goal, { connected: agentConnected(agent), lang: lang(), agent })}`; };
   for (const b of document.querySelectorAll('[data-agent]')) b.onclick = () => { agent = b.dataset.agent; Hostwerk.storage.set('agent', agent).catch(() => {}); renderGo(); };
   for (const b of document.querySelectorAll('[data-install]')) b.onclick = () => { const a = agentInfo(b.dataset.install); if (a) Hostwerk.terminal(a.install, { title: t('installAgentTitle', { name: a.label }) }).then(() => Hostwerk.toast(t('typedInTerminal'), { kind: 'success' })).catch(fail); };
-  for (const b of document.querySelectorAll('[data-task]')) b.onclick = () => { const x = CL.TASKS.find((y) => y.id === b.dataset.task); if (!goal.trim()) { goal = x[lang()][1]; renderGo(); const a = $('goal'); a.focus(); a.setSelectionRange(goal.length, goal.length); } };
+  // Vorlage nur in ein leeres Feld oder statt einer unveränderten anderen Vorlage – eigener Text wird nie überschrieben
+  const starter = (g) => !g.trim() || CL.TASKS.some((y) => y.de[1] === g || y.en[1] === g);
+  for (const b of document.querySelectorAll('[data-task]')) b.onclick = () => { const x = CL.TASKS.find((y) => y.id === b.dataset.task); if (starter(goal)) { goal = x[lang()][1]; renderGo(); const a = $('goal'); a.focus(); a.setSelectionRange(goal.length, goal.length); } else Hostwerk.toast(t('taskKeepsText'), { kind: 'info' }); };
   wireTemplates();
   const run = (withGoal) => {
     const pr = project(); if (!pr) return;
@@ -122,6 +131,8 @@ function renderGo() {
       .then(() => Hostwerk.toast(t('typedInTerminal'), { kind: 'success' })).catch(fail);
   };
   $('goStart').onclick = () => run(true);
+  // Strg+Enter (⌘+Enter) im Auftragsfeld = „Mit Auftrag loslegen“
+  ta.onkeydown = (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); const b = $('goStart'); if (b && !b.disabled) run(true); } };
   $('goOpen').onclick = () => run(false);
   const inst = $('installCode'); if (inst) inst.onclick = () => Hostwerk.terminal(st.install.cmd, { title: t('installCodeTitle'), shell: st.install.shell }).then(() => Hostwerk.toast(t('typedInTerminal'), { kind: 'success' })).catch(fail);
   wireUrls();
@@ -246,7 +257,16 @@ function budget(days) {
     <div class="tiny muted">${t('budgetHint')} <button type="button" class="btn xs ghost" id="budgetSet">${t('budgetChange')}</button></div></div></div>`;
 }
 async function renderTokens() {
-  if (!tools) { Hostwerk.render('#tokens', html`<div class="hw-skeleton" style="height:240px"></div>`); try { tools = await Hostwerk.get('/claude/tools'); } catch (e) { fail(e); return; } }
+  if (!tools) {
+    Hostwerk.render('#tokens', html`<div class="hw-skeleton" style="height:240px"></div>`);
+    try { tools = await Hostwerk.get('/claude/tools'); } catch (e) {
+      // Nicht im Skeleton hängen bleiben: Fehler zeigen, erneut versuchen
+      Hostwerk.render('#tokens', html`<div class="card"><div class="empty"><h3>${t('toolsFailed')}</h3><p class="small muted">${e.message}</p><button class="btn primary empty-action" id="toolsRetry">${I('refresh', 14)}${t('retry')}</button></div></div>`);
+      $('toolsRetry').onclick = () => renderTokens();
+      return;
+    }
+    if (tab !== 'tokens') return; // inzwischen anderer Reiter – beim Zurückkommen aus dem Zwischenspeicher
+  }
   const d = tools; const list = d.tools.filter((x) => !x.builtin);
   const days = (usage && usage.days) || []; const s = CL.usageSummary(days);
   Hostwerk.render('#tokens', html`<div class="cl-stack cl-fade">
@@ -254,7 +274,7 @@ async function renderTokens() {
     ${!d.claude ? html`<div class="callout warn"><b>${t('codeNotFound')}</b> ${t('codeNotFoundText')}</div>` : ''}
     ${budget(days)}
     <div class="grid grid-2">
-      <div class="card"><div class="card-head">${I('gauge')}<h3>${t('usageTitle')}</h3><span class="small muted">${t('usageSub')}</span><div class="right"><button class="btn sm" id="measure" ${measuring ? raw('disabled') : ''}>${I('refresh', 14)}${measuring ? t('measuring') : usage ? t('measureAgain') : t('measure')}</button></div></div>
+      <div class="card"><div class="card-head">${I('gauge')}<h3>${t('usageTitle')}</h3><span class="small muted">${t('usageSub')}</span><div class="right row-tight">${usageAt && !measuring ? html`<span class="tiny muted" title="${t('measuredHint')}">${t('measuredAt', { when: new Date(usageAt).toLocaleString(locale(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }) })}</span>` : ''}<button class="btn sm" id="measure" ${measuring ? raw('disabled') : ''}>${I('refresh', 14)}${measuring ? t('measuring') : usage ? t('measureAgain') : t('measure')}</button></div></div>
         <div class="card-body stack" style="gap:var(--sp-3)">${!usage ? html`<div class="small muted">${t('usageIntro')}</div>`
           : usage.error ? html`<div class="small muted">${usage.error}</div>`
           : !days.length ? html`<div class="small muted">${t('noSessions')}</div>`
@@ -297,6 +317,7 @@ async function renderTokens() {
 async function measure() {
   measuring = true; renderTokens();
   try { usage = await Hostwerk.get('/claude/tools/usage'); } catch (e) { usage = { error: e.message }; }
+  usageAt = Date.now();
   measuring = false; renderTokens();
 }
 async function toolAction(id, action, btn) {
@@ -331,9 +352,13 @@ const CAT_ART = {
   hostwerk: CL.ICON.graph,
 };
 async function renderTips() {
-  if (!tools) { try { tools = await Hostwerk.get('/claude/tools'); } catch { tools = { tips: [], tools: [], mcp: [] }; } }
+  // Eigene Tipps sofort zeigen – die Katalog-Tipps (/claude/tools, kann Sekunden dauern) kommen nach
+  if (!tools && !renderTips.loading) {
+    renderTips.loading = Hostwerk.get('/claude/tools').then((x) => { tools = x; }, () => { tools = { tips: [], tools: [], mcp: [] }; })
+      .then(() => { renderTips.loading = null; if (tab === 'tips' && !(document.activeElement && document.activeElement.id === 'tipQ')) renderTips(); });
+  }
   const own = CL.filterTips(CL.TIPS, { cat: tipCat, q: tipQ, lang: lang() });
-  const extra = (tools.tips || []).filter((x) => !tipCat && (!tipQ || `${x.title} ${x.text}`.toLowerCase().includes(tipQ.toLowerCase())));
+  const extra = ((tools && tools.tips) || []).filter((x) => !tipCat && (!tipQ || `${x.title} ${x.text}`.toLowerCase().includes(tipQ.toLowerCase())));
   const art = (cat) => raw(`<svg class="cl-cat-art" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${CAT_ART[cat] || CL.ICON.bulb}</svg>`);
   Hostwerk.render('#tips', html`<div class="cl-stack cl-fade">
     <div class="small muted">${t('tipsIntro')}</div>
@@ -380,7 +405,7 @@ async function renderMemory() {
         ${sw('mProj', mem.project, t('memProject'))}
         ${sw('mGraph', mem.graph, t('memGraph'))}
         <label class="label" for="mMax">${t('memMax', { n: n(mem.maxTokens) })}</label>
-        <input type="range" id="mMax" min="200" max="8000" step="100" value="${mem.maxTokens}" aria-valuetext="${n(mem.maxTokens)} Tokens">
+        <input type="range" id="mMax" min="200" max="8000" step="100" value="${mem.maxTokens}" aria-valuetext="${t('tokensN', { n: n(mem.maxTokens) })}">
         <p class="tiny muted" style="margin:0">${t('memPrivate')}</p>
       </div></div>
       <div class="card"><div class="card-head">${I('bot')}<h3>${t('memWho')}</h3></div><div class="card-body cl-stack" style="gap:var(--sp-2)">
@@ -389,16 +414,19 @@ async function renderMemory() {
       </div></div>
     </div>
     <div class="card"><div class="card-head">${I('eye')}<h3>${t('memPreview')}</h3><div class="right row-tight"><select class="select" id="mPv" aria-label="${t('memPreviewFor')}">${P.map((p) => html`<option value="${p.id}" ${p.id === memProvider ? raw('selected') : ''}>${p.label}</option>`)}</select><button class="btn sm" id="mPvGo">${t('memShow')}</button></div></div>
-      <div class="card-body">${memPreview == null ? html`<p class="small muted" style="margin:0">${t('memPreviewHint')}</p>` : memPreview.text ? html`<div class="tiny muted" style="margin-bottom:var(--sp-2)">≈ ${n(memPreview.tokens)} Tokens</div><pre class="cl-mem-pre">${memPreview.text}</pre>` : html`<p class="small muted" style="margin:0">${t('memNothing')}</p>`}</div></div>
+      <div class="card-body">${memPreview == null ? html`<p class="small muted" style="margin:0">${t('memPreviewHint')}</p>` : memPreview.text ? html`<div class="tiny muted" style="margin-bottom:var(--sp-2)">≈ ${t('tokensN', { n: n(memPreview.tokens) })}</div><pre class="cl-mem-pre">${memPreview.text}</pre>` : html`<p class="small muted" style="margin:0">${t('memNothing')}</p>`}</div></div>
   </div>`);
   const save = async (body) => { try { mem = { ...mem, ...(await Hostwerk.put('/ai/memory-share', body)) }; memPreview = null; renderMemory(); } catch (e) { fail(e); renderMemory(); } };
   $('mOn').onchange = (e) => save({ on: e.target.checked });
   for (const c of cl) $(`mc-${c.id}`).onchange = (e) => save({ clusters: e.target.checked ? [...new Set([...mem.clusters, c.id])] : mem.clusters.filter((x) => x !== c.id) });
   $('mProj').onchange = (e) => save({ project: e.target.checked });
   $('mGraph').onchange = (e) => save({ graph: e.target.checked });
+  // Beim Ziehen gleich die Zahl zeigen, gespeichert wird beim Loslassen
+  $('mMax').oninput = (e) => { const v = n(Number(e.target.value)); document.querySelector('label[for="mMax"]').textContent = t('memMax', { n: v }); e.target.setAttribute('aria-valuetext', t('tokensN', { n: v })); };
   $('mMax').onchange = (e) => save({ maxTokens: Number(e.target.value) });
   for (const p of P) $(`mp-${p.id}`).onchange = (e) => save({ providers: { ...mem.providers, [p.id]: e.target.checked } });
-  $('mPv').onchange = (e) => { memProvider = e.target.value; };
+  // Andere KI gewählt: die alte Vorschau gehört nicht mehr zur Auswahl
+  $('mPv').onchange = (e) => { memProvider = e.target.value; if (memPreview != null) { memPreview = null; renderMemory(); } };
   $('mPvGo').onclick = async () => { try { memPreview = await Hostwerk.post('/ai/memory-share/preview', { provider: memProvider, question: '' }); renderMemory(); } catch (e) { fail(e); } };
 }
 
@@ -424,7 +452,7 @@ function wireTemplates() {
     form(html`<div class="row-tight cl-tpl-form"><input class="input grow" id="tplName" maxlength="40" placeholder="${t('tplName')}" aria-label="${t('tplName')}"><button class="btn sm primary" id="tplOk">${t('tplSaveShort')}</button></div>`);
     const name = $('tplName'); name.focus();
     const ok = () => { const title = name.value.trim(); if (!title) return; saveTemplates([...templates.filter((y) => y.title !== title), ...CL.cleanTemplates([{ title, text: goal }])].slice(-30)); Hostwerk.toast(t('tplSaved'), { kind: 'success' }); };
-    $('tplOk').onclick = ok; name.onkeydown = (e) => { if (e.key === 'Enter') ok(); };
+    $('tplOk').onclick = ok; name.onkeydown = (e) => { if (e.key === 'Enter') ok(); else if (e.key === 'Escape') form(''); };
   };
   const share = $('tplShare');
   if (share) share.onclick = () => Hostwerk.copy(CL.exportTemplates(templates)).then(() => Hostwerk.toast(t('tplCopied'), { kind: 'success' })).catch(fail);
@@ -485,7 +513,8 @@ function sectionMore() {
 Hostwerk.ready().then(async (info) => {
   tab = info.embed === 'section' ? sectionTab() : info.tab || 'go';
   Hostwerk.on('tab', show);
-  Hostwerk.on('lang', () => show(tab));
+  // Werkzeug-Texte liefert Hostwerk in der eingestellten Sprache – nach dem Wechsel neu holen
+  Hostwerk.on('lang', () => { tools = null; memPreview = null; show(tab); });
   Hostwerk.on('action', runAction);
   Hostwerk.on('settings', (v) => { settings = v || {}; if (tab === 'tokens') show(tab); });
   try { await loadBase(); } catch (e) { loadError = e.message; }

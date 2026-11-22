@@ -118,6 +118,11 @@
       "default": true
     }
   ],
+  "data": {
+    "files": [
+      "data/claude-budget.json"
+    ]
+  },
   "contributes": {
     "tabs": [
       {

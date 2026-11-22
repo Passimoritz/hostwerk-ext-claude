@@ -17,6 +17,8 @@
 .cl-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .cl-chip.on { border-color: var(--accent); background: var(--accent-soft); }
 .cl-wide { grid-column: 1 / -1; }
+/* Breite Einstellungen (VS Code, Cursor …) dürfen die Spalte nicht aufdrücken – der Block scrollt selbst */
+#connect > .grid > .card, .cl-client { min-width: 0; }
 .cl-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
 .cl-dot.ok { background: var(--ok); }
 .cl-client { padding: var(--sp-3); border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--surface-2); }
@@ -139,6 +141,9 @@
 .cl-tpl { flex-wrap: wrap; }
 .cl-tpl-form { gap: var(--sp-2); }
 .cl-budget { margin: var(--sp-2) 0; }
+/* Tagesgrenze: Balken in der Farbe des Hinweises (ab 80 % gelb, ab 100 % rot) statt immer grün */
+.callout.warn .cl-budget i { background: var(--warn); }
+.callout.err .cl-budget i { background: var(--err); }
 /* Als Abschnitt in KI → Einstellungen (SDK 3.10): Titel steht schon auf der Karte, der Rest der Seite ist einen Klick entfernt */
 html[data-embed="section"] .cl-mem-hero h2 { display: none; }
 .cl-more { margin-top: var(--sp-3); flex-wrap: wrap; }

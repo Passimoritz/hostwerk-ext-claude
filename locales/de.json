@@ -195,5 +195,11 @@
   "pathCopied": "Pfad kopiert",
   "more_tokens": "Token sparen",
   "more_tips": "Tipps & Tricks",
-  "more_log": "Protokoll"
+  "more_log": "Protokoll",
+  "taskKeepsText": "Dein Auftrag bleibt stehen – leere das Feld, um diese Vorlage zu nehmen.",
+  "toolsFailed": "Die Spar-Werkzeuge ließen sich nicht laden",
+  "tokensN": "{n} Tokens",
+  "measuredAt": "gemessen {when}",
+  "measuredHint": "Zeitpunkt dieser Messung – Hostwerk merkt das Ergebnis bis zu 10 Minuten, danach misst „Neu messen“ frisch.",
+  "startKeys": "Strg+Enter im Auftragsfeld"
 }
